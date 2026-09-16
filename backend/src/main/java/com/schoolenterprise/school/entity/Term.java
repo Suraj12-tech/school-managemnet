@@ -21,4 +21,5 @@ public class Term {
     private LocalDate startDate;
     @Column(name = "end_date")
     private LocalDate endDate;
+    private String status = "ACTIVE";
 }

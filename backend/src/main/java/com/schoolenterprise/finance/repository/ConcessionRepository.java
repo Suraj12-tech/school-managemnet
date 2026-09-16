@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface ConcessionRepository extends JpaRepository<Concession, Long> {
     List<Concession> findByStudentId(Long studentId);
+    List<Concession> findByStudentIdAndAcademicYearId(Long studentId, Long academicYearId);
 }

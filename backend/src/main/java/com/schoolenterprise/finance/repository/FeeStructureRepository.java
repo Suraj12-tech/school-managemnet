@@ -8,4 +8,6 @@ import java.util.List;
 public interface FeeStructureRepository extends JpaRepository<FeeStructure, Long> {
     List<FeeStructure> findByAcademicYearId(Long academicYearId);
     List<FeeStructure> findByAcademicYearIdAndClassIdAndCategory(Long academicYearId, Long classId, String category);
+    boolean existsByAcademicYearIdAndClassIdAndCategory(Long academicYearId, Long classId, String category);
+    boolean existsByAcademicYearIdAndClassIdAndCategoryAndIdNot(Long academicYearId, Long classId, String category, Long id);
 }

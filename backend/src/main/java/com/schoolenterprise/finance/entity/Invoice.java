@@ -19,6 +19,8 @@ public class Invoice {
     private Long studentId;
     @Column(name = "academic_year_id")
     private Long academicYearId;
+    @Column(name = "fee_structure_id")
+    private Long feeStructureId;
     @Column(name = "invoice_number")
     private String invoiceNumber;
     @Column(name = "issue_date")

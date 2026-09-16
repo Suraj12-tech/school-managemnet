@@ -31,6 +31,7 @@ public class AuthService {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final ResetEmailService resetEmailService;
 
     @Transactional
     public LoginResponse login(LoginRequest request, String ip) {
@@ -67,11 +68,12 @@ public class AuthService {
         loginSessionRepository.findByTokenId(tokenId).ifPresent(session -> {
             session.setRevoked(true);
             loginSessionRepository.save(session);
+            auditService.record("users", "logout", "AppUser", session.getUserId(), "Logout");
         });
     }
 
     @Transactional
-    public String forgotPassword(String email) {
+    public java.util.Map<String, String> forgotPassword(String email) {
         AppUser user = userRepository.findByEmail(email)
                 .orElseThrow(() -> AppException.notFound("No user with that email"));
         String token = UUID.randomUUID().toString();
@@ -79,13 +81,16 @@ public class AuthService {
         user.setResetTokenExpiry(LocalDateTime.now().plusHours(2));
         userRepository.save(user);
         auditService.record("users", "forgot-password", "AppUser", user.getId(), "Reset token created");
-        // Demo only: a real app would email this token.
-        return token;
+        resetEmailService.send(user, token);
+        return java.util.Map.of("message", "Password reset instructions sent to your email");
     }
 
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        AppUser user = userRepository.findByResetToken(token)
+        if (token == null || token.isBlank()) {
+            throw AppException.badRequest("Reset token is required");
+        }
+        AppUser user = userRepository.findByResetToken(token.trim())
                 .orElseThrow(() -> AppException.badRequest("Invalid reset token"));
         if (user.getResetTokenExpiry() == null || user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
             throw AppException.badRequest("Reset token has expired");
@@ -93,7 +98,14 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
+        if (!passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw AppException.badRequest("Password could not be updated");
+        }
+        loginSessionRepository.findByUserIdAndRevokedFalse(user.getId()).forEach(session -> {
+            session.setRevoked(true);
+            loginSessionRepository.save(session);
+        });
         auditService.record("users", "reset-password", "AppUser", user.getId(), "Password changed");
     }
 }

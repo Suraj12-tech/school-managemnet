@@ -19,4 +19,6 @@ public class Section {
     private String name;
     @Column(name = "class_teacher_staff_id")
     private Long classTeacherStaffId;
+    @Column(nullable = false)
+    private String status = "ACTIVE";
 }

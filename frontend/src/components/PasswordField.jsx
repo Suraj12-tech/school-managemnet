@@ -1,4 +1,5 @@
 ﻿import { useState } from "react";
+
 export default function PasswordField({
   value,
   onChange,
@@ -6,13 +7,18 @@ export default function PasswordField({
   required = false,
   minLength,
   autoComplete,
-  id
+  id,
+  name,
+  disabled,
+  ...rest
 }) {
   const [visible, setVisible] = useState(false);
+
   return (
     <div className="password-field">
       <input
         id={id}
+        name={name}
         type={visible ? "text" : "password"}
         value={value}
         onChange={onChange}
@@ -20,6 +26,8 @@ export default function PasswordField({
         required={required}
         minLength={minLength}
         autoComplete={autoComplete}
+        disabled={disabled}
+        {...rest}
       />
       <button
         type="button"

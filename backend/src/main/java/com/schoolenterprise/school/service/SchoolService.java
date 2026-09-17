@@ -2,13 +2,16 @@ package com.schoolenterprise.school.service;
 
 import com.schoolenterprise.audit.service.AuditService;
 import com.schoolenterprise.common.exception.AppException;
+import com.schoolenterprise.school.dto.AcademicYearRequest;
+import com.schoolenterprise.school.dto.CalendarEventRequest;
+import com.schoolenterprise.school.dto.TermRequest;
 import com.schoolenterprise.school.entity.AcademicYear;
+import com.schoolenterprise.school.entity.CalendarEvent;
 import com.schoolenterprise.school.entity.Campus;
 import com.schoolenterprise.school.entity.School;
 import com.schoolenterprise.school.entity.Term;
-import com.schoolenterprise.school.dto.AcademicYearRequest;
-import com.schoolenterprise.school.dto.TermRequest;
 import com.schoolenterprise.school.repository.AcademicYearRepository;
+import com.schoolenterprise.school.repository.CalendarEventRepository;
 import com.schoolenterprise.school.repository.CampusRepository;
 import com.schoolenterprise.school.repository.SchoolRepository;
 import com.schoolenterprise.school.repository.TermRepository;
@@ -16,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,6 +31,7 @@ public class SchoolService {
     private final CampusRepository campusRepository;
     private final AcademicYearRepository academicYearRepository;
     private final TermRepository termRepository;
+    private final CalendarEventRepository calendarEventRepository;
     private final AuditService auditService;
 
     public School getSchool() {
@@ -182,6 +187,68 @@ public class SchoolService {
         auditService.record("school", "delete", "Term", id, term.getName());
     }
 
+    public List<CalendarEvent> events(Long yearId, String eventType) {
+        if (yearId == null) {
+            return calendarEventRepository.findAll();
+        }
+        year(yearId);
+        if (eventType != null && !eventType.trim().isEmpty()) {
+            return calendarEventRepository.findByAcademicYearIdAndEventTypeOrderByStartDateAsc(yearId, eventType.trim());
+        }
+        return calendarEventRepository.findByAcademicYearIdOrderByStartDateAsc(yearId);
+    }
+
+    public CalendarEvent event(Long id) {
+        CalendarEvent event = calendarEventRepository.findById(id)
+                .orElseThrow(() -> AppException.notFound("Calendar event not found"));
+        year(event.getAcademicYearId());
+        return event;
+    }
+
+    @Transactional
+    public CalendarEvent saveEvent(Long id, CalendarEventRequest request) {
+        AcademicYear year = year(request.getAcademicYearId());
+        if (!"ACTIVE".equals(year.getStatus())) {
+            throw AppException.badRequest("Calendar events cannot be changed under an archived academic year");
+        }
+        validateCalendarEvent(request, id, year);
+        CalendarEvent event = id == null ? new CalendarEvent() : event(id);
+        if (event.getId() != null && !Objects.equals(event.getAcademicYearId(), year.getId())) {
+            throw AppException.badRequest("Calendar event cannot be moved to another academic year");
+        }
+        event.setAcademicYearId(year.getId());
+        event.setTitle(request.getTitle().trim());
+        event.setEventType(request.getEventType().trim());
+        event.setStartDate(request.getStartDate());
+        event.setEndDate(request.getEndDate() != null ? request.getEndDate() : request.getStartDate());
+        event.setDescription(request.getDescription() == null ? null : request.getDescription().trim());
+        event.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
+        CalendarEvent saved = calendarEventRepository.save(event);
+        auditService.record("school", "edit", "CalendarEvent", saved.getId(), saved.getTitle());
+        return saved;
+    }
+
+    @Transactional
+    public CalendarEvent updateEventStatus(Long id, String status) {
+        CalendarEvent event = event(id);
+        year(event.getAcademicYearId());
+        if (!"ACTIVE".equals(status) && !"INACTIVE".equals(status)) {
+            throw AppException.badRequest("Calendar event status must be ACTIVE or INACTIVE");
+        }
+        event.setStatus(status);
+        CalendarEvent saved = calendarEventRepository.save(event);
+        auditService.record("school", "edit", "CalendarEvent", id, status);
+        return saved;
+    }
+
+    @Transactional
+    public void deleteEvent(Long id) {
+        CalendarEvent event = event(id);
+        year(event.getAcademicYearId());
+        calendarEventRepository.delete(event);
+        auditService.record("school", "delete", "CalendarEvent", id, event.getTitle());
+    }
+
     private void validateYear(AcademicYearRequest request, Long schoolId, Long editingId) {
         if (!request.getStartDate().isBefore(request.getEndDate())) {
             throw AppException.badRequest("Academic year start date must be before end date");
@@ -221,6 +288,17 @@ public class SchoolService {
                         existing.getStartDate(), existing.getEndDate()));
         if (overlaps) {
             throw AppException.badRequest("Term dates overlap an existing term");
+        }
+    }
+
+    private void validateCalendarEvent(CalendarEventRequest request, Long editingId, AcademicYear year) {
+        LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : request.getStartDate();
+        if (request.getStartDate().isAfter(endDate)) {
+            throw AppException.badRequest("Event start date must be on or before end date");
+        }
+        if (request.getStartDate().isBefore(year.getStartDate())
+                || endDate.isAfter(year.getEndDate())) {
+            throw AppException.badRequest("Event dates must fall within the academic year");
         }
     }
 

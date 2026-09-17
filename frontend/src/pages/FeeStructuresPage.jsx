@@ -1,83 +1,141 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 
+const emptyForm = { name: "", category: "GENERAL", academicYearId: "", classId: "", status: "ACTIVE", items: [] };
+
 export default function FeeStructuresPage() {
   const [structures, setStructures] = useState([]);
   const [years, setYears] = useState([]);
   const [classes, setClasses] = useState([]);
   const [heads, setHeads] = useState([]);
-  const [items, setItems] = useState([]);
-  const [selected, setSelected] = useState("");
-  const [form, setForm] = useState({ name: "", category: "GENERAL", academicYearId: "", classId: "" });
-  const [item, setItem] = useState({ feeHeadId: "", amount: "" });
+  const [form, setForm] = useState(emptyForm);
+  const [editing, setEditing] = useState(null);
+  const [viewing, setViewing] = useState(null);
+  const [error, setError] = useState("");
 
   async function load() {
-    setStructures(await api("/api/fee-structures"));
-    setYears(await api("/api/academic-years"));
-    setClasses(await api("/api/classes"));
-    setHeads(await api("/api/fee-heads"));
+    const [structureRows, yearRows, classRows, headRows] = await Promise.all([
+      api("/api/fee-structures"), api("/api/academic-years"),
+      api("/api/classes"), api("/api/fee-heads")
+    ]);
+    setStructures(structureRows);
+    setYears(yearRows);
+    setClasses(classRows);
+    setHeads(headRows.filter((head) => head.status === "ACTIVE"));
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load().catch((err) => setError(err.message)); }, []);
+
+  function setItem(index, field, value) {
+    const items = form.items.map((item, i) => i === index ? { ...item, [field]: value } : item);
+    setForm({ ...form, items });
+  }
+
+  function total(items) {
+    return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  }
 
   async function save(e) {
     e.preventDefault();
-    await api("/api/fee-structures", "POST", {
-      ...form,
-      academicYearId: Number(form.academicYearId),
-      classId: Number(form.classId)
-    });
-    load();
+    setError("");
+    try {
+      if (!form.items.length) throw new Error("Add at least one fee item");
+      await api(editing ? `/api/fee-structures/${editing.id}` : "/api/fee-structures",
+        editing ? "PUT" : "POST", {
+          ...form,
+          academicYearId: Number(form.academicYearId),
+          classId: Number(form.classId),
+          items: form.items.map((item) => ({ feeHeadId: Number(item.feeHeadId), amount: Number(item.amount) }))
+        });
+      setForm(emptyForm);
+      setEditing(null);
+      await load();
+    } catch (err) { setError(err.message || "Unable to save fee structure"); }
   }
 
-  async function openItems(id) {
-    setSelected(id);
-    setItems(await api("/api/fee-structures/" + id + "/items"));
+  async function open(row) {
+    try { setViewing(await api(`/api/fee-structures/${row.id}`)); }
+    catch (err) { setError(err.message); }
   }
 
-  async function addItem(e) {
-    e.preventDefault();
-    await api("/api/fee-structure-items", "POST", {
-      feeStructureId: Number(selected),
-      feeHeadId: Number(item.feeHeadId),
-      amount: Number(item.amount)
+  function edit(row) {
+    setEditing(row);
+    setForm({
+      name: row.name, category: row.category, academicYearId: String(row.academicYearId),
+      classId: String(row.classId), status: row.status || "ACTIVE",
+      items: (row.items || []).map((item) => ({ feeHeadId: String(item.feeHeadId), amount: item.amount }))
     });
-    openItems(selected);
+    setViewing(null);
+  }
+
+  async function changeStatus(row) {
+    try {
+      await api(`/api/fee-structures/${row.id}/status`, "PATCH",
+        { status: row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" });
+      await load();
+    } catch (err) { setError(err.message || "Unable to update status"); }
+  }
+
+  async function remove(row) {
+    if (!window.confirm(`Delete ${row.name}?`)) return;
+    try { await api(`/api/fee-structures/${row.id}`, "DELETE"); await load(); }
+    catch (err) { setError(err.message || "Unable to delete fee structure"); }
   }
 
   return (
     <div>
-      <h2>Fee Structure</h2>
+      <h2>Fee Structures</h2>
       <form className="card" onSubmit={save}>
-        <input placeholder="Class 1 General" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+        <input required placeholder="Structure name" value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
           <option>GENERAL</option><option>STAFF_WARD</option><option>SCHOLARSHIP</option>
         </select>
-        <select value={form.academicYearId} onChange={(e) => setForm({ ...form, academicYearId: e.target.value })}>
-          <option value="">Year</option>{years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+        <select required value={form.academicYearId} onChange={(e) => setForm({ ...form, academicYearId: e.target.value })}>
+          <option value="">Academic year</option>
+          {years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
         </select>
-        <select value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
-          <option value="">Class</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        <select required value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
+          <option value="">Class</option>
+          {classes.map((schoolClass) => <option key={schoolClass.id} value={schoolClass.id}>{schoolClass.name}</option>)}
         </select>
-        <button>Create structure</button>
-      </form>
-      <ul>
-        {structures.map((s) => (
-          <li key={s.id}>
-            <button className="linkish" onClick={() => openItems(s.id)}>{s.name} ({s.category})</button>
-          </li>
+        <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+          <option>ACTIVE</option><option>INACTIVE</option>
+        </select>
+        <h4>Fee items</h4>
+        {form.items.map((item, index) => (
+          <div className="form-row" key={index}>
+            <select required value={item.feeHeadId} onChange={(e) => setItem(index, "feeHeadId", e.target.value)}>
+              <option value="">Fee head</option>
+              {heads.map((head) => <option key={head.id} value={head.id}>{head.name} ({head.code})</option>)}
+            </select>
+            <input required min="0" type="number" step="0.01" placeholder="Amount" value={item.amount}
+              onChange={(e) => setItem(index, "amount", e.target.value)} />
+            <button type="button" onClick={() => setForm({ ...form, items: form.items.filter((_, i) => i !== index) })}>Remove</button>
+          </div>
         ))}
-      </ul>
-      {selected && (
-        <form className="card" onSubmit={addItem}>
-          <h3>Items for structure #{selected}</h3>
-          <select value={item.feeHeadId} onChange={(e) => setItem({ ...item, feeHeadId: e.target.value })}>
-            <option value="">Fee head</option>{heads.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
-          </select>
-          <input placeholder="Amount" value={item.amount} onChange={(e) => setItem({ ...item, amount: e.target.value })} />
-          <button>Add item</button>
-          <ul>{items.map((i) => <li key={i.id}>Head {i.feeHeadId}: {i.amount}</li>)}</ul>
-        </form>
-      )}
+        <button type="button" onClick={() => setForm({ ...form, items: [...form.items, { feeHeadId: "", amount: "" }] })}>Add fee head</button>
+        <strong>Total: {total(form.items).toFixed(2)}</strong>
+        <button>{editing ? "Update structure" : "Create structure"}</button>
+        {editing && <button type="button" onClick={() => { setEditing(null); setForm(emptyForm); }}>Cancel</button>}
+      </form>
+      {error && <div className="error">{error}</div>}
+      <table>
+        <thead><tr><th>Name</th><th>Category</th><th>Academic Year</th><th>Class</th><th>Total Amount</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>{structures.map((row) => <tr key={row.id}>
+          <td>{row.name}</td><td>{row.category}</td><td>{row.academicYear || row.academicYearId}</td>
+          <td>{row.className || row.classId}</td><td>{Number(row.totalAmount || 0).toFixed(2)}</td><td>{row.status}</td>
+          <td><button type="button" onClick={() => open(row)}>View</button>{" "}
+            <button type="button" onClick={() => edit(row)}>Edit</button>{" "}
+            <button type="button" onClick={() => changeStatus(row)}>{row.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>{" "}
+            <button type="button" onClick={() => remove(row)}>Delete</button></td>
+        </tr>)}</tbody>
+      </table>
+      {viewing && <div className="card">
+        <h3>{viewing.name}</h3>
+        <p>{viewing.category} | {viewing.academicYear} | {viewing.className} | Total: {Number(viewing.totalAmount || 0).toFixed(2)}</p>
+        <ul>{(viewing.items || []).map((item) => <li key={item.id}>{item.feeHead}: {Number(item.amount).toFixed(2)}</li>)}</ul>
+        <button type="button" onClick={() => setViewing(null)}>Close</button>
+      </div>}
     </div>
   );
 }

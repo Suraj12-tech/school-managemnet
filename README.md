@@ -63,11 +63,18 @@ CREATE DATABASE school_enterprise;
 
 3. Edit `backend/src/main/resources/application.properties` and set your MySQL password.
 
-4. Start the API:
+4. Start the API (Maven Wrapper works if `mvn` is not installed):
 
 ```bash
 cd backend
-mvn spring-boot:run
+mvnw.cmd spring-boot:run
+```
+
+If MySQL is not available, use the built-in H2 database:
+
+```bash
+cd backend
+mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
 On first start the app creates:

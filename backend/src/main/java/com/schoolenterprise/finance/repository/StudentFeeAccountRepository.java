@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface StudentFeeAccountRepository extends JpaRepository<StudentFeeAccount, Long> {
     Optional<StudentFeeAccount> findByStudentIdAndAcademicYearId(Long studentId, Long academicYearId);
     List<StudentFeeAccount> findByAcademicYearId(Long academicYearId);
+    boolean existsByAcademicYearId(Long academicYearId);
 }

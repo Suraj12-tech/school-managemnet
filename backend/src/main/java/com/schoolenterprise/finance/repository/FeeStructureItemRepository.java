@@ -8,4 +8,5 @@ import java.util.List;
 public interface FeeStructureItemRepository extends JpaRepository<FeeStructureItem, Long> {
     List<FeeStructureItem> findByFeeStructureId(Long feeStructureId);
     void deleteByFeeStructureId(Long feeStructureId);
+    boolean existsByFeeHeadId(Long feeHeadId);
 }

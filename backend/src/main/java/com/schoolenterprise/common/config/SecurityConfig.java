@@ -1,6 +1,7 @@
 package com.schoolenterprise.common.config;
 
 import com.schoolenterprise.common.security.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,8 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable());
         http.cors(cors -> {});
         http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, exception) -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED)));
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

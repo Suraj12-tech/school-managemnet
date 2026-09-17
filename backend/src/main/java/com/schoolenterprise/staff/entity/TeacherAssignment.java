@@ -22,4 +22,8 @@ public class TeacherAssignment {
     private Long sectionId;
     @Column(name = "academic_year_id")
     private Long academicYearId;
+    @Column(name = "assignment_type", nullable = false)
+    private String assignmentType = "SUBJECT_TEACHER";
+    @Column(nullable = false)
+    private String status = "ACTIVE";
 }

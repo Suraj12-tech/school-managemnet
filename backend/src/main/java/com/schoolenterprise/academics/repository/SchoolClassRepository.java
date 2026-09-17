@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface SchoolClassRepository extends JpaRepository<SchoolClass, Long> {
     List<SchoolClass> findBySchoolId(Long schoolId);
+    boolean existsBySchoolIdAndNameIgnoreCase(Long schoolId, String name);
 }

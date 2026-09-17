@@ -2,8 +2,10 @@ package com.schoolenterprise.student.controller;
 
 import com.schoolenterprise.common.api.ApiResponse;
 import com.schoolenterprise.common.security.RequirePermission;
+import com.schoolenterprise.student.dto.*;
 import com.schoolenterprise.student.entity.*;
 import com.schoolenterprise.student.service.StudentService;
+import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -31,45 +33,84 @@ public class StudentController {
 
     @PostMapping("/students")
     @RequirePermission(module = "students", action = "create")
-    public ApiResponse<Student> create(@RequestBody Student student) {
-        return ApiResponse.ok(studentService.save(student));
+    public ApiResponse<Student> create(@Valid @RequestBody StudentRequest request) {
+        return ApiResponse.ok(studentService.create(request));
     }
 
     @PutMapping("/students/{id}")
     @RequirePermission(module = "students", action = "edit")
-    public ApiResponse<Student> update(@PathVariable Long id, @RequestBody Student student) {
-        student.setId(id);
-        return ApiResponse.ok(studentService.save(student));
+    public ApiResponse<Student> update(@PathVariable Long id, @Valid @RequestBody StudentRequest request) {
+        return ApiResponse.ok(studentService.update(id, request));
+    }
+
+    @PatchMapping("/students/{id}/status")
+    @RequirePermission(module = "students", action = "edit")
+    public ApiResponse<Student> updateStatus(@PathVariable Long id,
+                                              @Valid @RequestBody StatusBody body) {
+        return ApiResponse.ok(studentService.updateStatus(id, body.status));
     }
 
     @GetMapping("/guardians")
     @RequirePermission(module = "students", action = "view")
-    public ApiResponse<List<Guardian>> guardians() {
+    public ApiResponse<List<GuardianSummary>> guardians() {
         return ApiResponse.ok(studentService.guardians());
+    }
+
+    @GetMapping("/guardians/{id}")
+    @RequirePermission(module = "students", action = "view")
+    public ApiResponse<GuardianDetailsResponse> guardian(@PathVariable Long id) {
+        return ApiResponse.ok(studentService.guardianDetails(id));
     }
 
     @PostMapping("/guardians")
     @RequirePermission(module = "students", action = "create")
-    public ApiResponse<Guardian> saveGuardian(@RequestBody Guardian g) {
-        return ApiResponse.ok(studentService.saveGuardian(g));
+    public ApiResponse<Guardian> saveGuardian(@Valid @RequestBody GuardianRequest request) {
+        return ApiResponse.ok(studentService.saveGuardian(request));
+    }
+
+    @PutMapping("/guardians/{id}")
+    @RequirePermission(module = "students", action = "edit")
+    public ApiResponse<Guardian> updateGuardian(@PathVariable Long id, @Valid @RequestBody GuardianRequest request) {
+        return ApiResponse.ok(studentService.updateGuardian(id, request));
+    }
+
+    @PatchMapping("/guardians/{id}/status")
+    @RequirePermission(module = "students", action = "edit")
+    public ApiResponse<Guardian> updateGuardianStatus(@PathVariable Long id,
+                                                       @Valid @RequestBody GuardianStatusRequest request) {
+        return ApiResponse.ok(studentService.updateGuardianStatus(id, request.getStatus()));
+    }
+
+    @GetMapping("/guardians/{id}/students")
+    @RequirePermission(module = "students", action = "view")
+    public ApiResponse<List<LinkedStudentResponse>> guardianStudents(@PathVariable Long id) {
+        return ApiResponse.ok(studentService.guardianStudents(id));
     }
 
     @PostMapping("/students/{id}/guardians")
     @RequirePermission(module = "students", action = "edit")
-    public ApiResponse<StudentGuardian> link(@PathVariable Long id, @RequestBody LinkBody body) {
-        return ApiResponse.ok(studentService.linkGuardian(id, body.getGuardianId(), body.isPrimaryGuardian()));
+    public ApiResponse<StudentGuardianResponse> link(@PathVariable Long id,
+                                                     @Valid @RequestBody LinkGuardianRequest request) {
+        return ApiResponse.ok(studentService.linkGuardian(id, request));
     }
 
     @GetMapping("/students/{id}/guardians")
     @RequirePermission(module = "students", action = "view")
-    public ApiResponse<List<StudentGuardian>> studentGuardians(@PathVariable Long id) {
+    public ApiResponse<List<StudentGuardianResponse>> studentGuardians(@PathVariable Long id) {
         return ApiResponse.ok(studentService.studentGuardians(id));
+    }
+
+    @DeleteMapping("/students/{studentId}/guardians/{guardianId}")
+    @RequirePermission(module = "students", action = "edit")
+    public ApiResponse<Void> unlink(@PathVariable Long studentId, @PathVariable Long guardianId) {
+        studentService.unlinkGuardian(studentId, guardianId);
+        return ApiResponse.ok(null);
     }
 
     @PostMapping("/enrollments")
     @RequirePermission(module = "students", action = "edit")
-    public ApiResponse<Enrollment> enroll(@RequestBody EnrollBody body) {
-        return ApiResponse.ok(studentService.enroll(body.getStudentId(), body.getSectionId(), body.getAcademicYearId()));
+    public ApiResponse<Enrollment> enroll(@Valid @RequestBody EnrollmentRequest request) {
+        return ApiResponse.ok(studentService.enroll(request));
     }
 
     @GetMapping("/students/{id}/enrollments")
@@ -98,15 +139,9 @@ public class StudentController {
     }
 
     @Data
-    public static class LinkBody {
-        private Long guardianId;
-        private boolean primaryGuardian;
-    }
-
-    @Data
-    public static class EnrollBody {
-        private Long studentId;
-        private Long sectionId;
-        private Long academicYearId;
+    public static class StatusBody {
+        @jakarta.validation.constraints.NotBlank
+        @jakarta.validation.constraints.Pattern(regexp = "ACTIVE|INACTIVE")
+        private String status;
     }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
 
 export default function DashboardPage() {
   const [data, setData] = useState(null);
@@ -9,12 +10,26 @@ export default function DashboardPage() {
     api("/api/dashboard/summary").then(setData).catch((e) => setError(e.message));
   }, []);
 
-  if (error) return <p className="error">{error}</p>;
-  if (!data) return <p>Loading dashboard...</p>;
+  if (error) {
+    return (
+      <div>
+        <PageHeader title="Administration dashboard" description="A quick view of school activity, collections, and items that need attention." />
+        <p className="error">{error}</p>
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <div>
+        <PageHeader title="Administration dashboard" description="A quick view of school activity, collections, and items that need attention." />
+        <p className="muted">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <h2>Administration Dashboard</h2>
+      <PageHeader title="Administration dashboard" description="A quick view of school activity, collections, and items that need attention." />
       <div className="cards">
         <Stat title="Students" value={data.studentCount} />
         <Stat title="Active students" value={data.activeStudents} />
@@ -23,12 +38,14 @@ export default function DashboardPage() {
         <Stat title="Outstanding" value={data.outstanding} />
         <Stat title="Unpaid invoices" value={data.unpaidInvoices} />
       </div>
-      <h3>Alerts</h3>
-      {data.alerts?.length ? (
-        <ul>{data.alerts.map((a) => <li key={a}>{a}</li>)}</ul>
-      ) : (
-        <p className="muted">No pending administrative alerts.</p>
-      )}
+      <div className="card">
+        <h3>Alerts</h3>
+        {data.alerts?.length ? (
+          <ul className="list">{data.alerts.map((a) => <li key={a}>{a}</li>)}</ul>
+        ) : (
+          <p className="muted">No pending administrative alerts.</p>
+        )}
+      </div>
     </div>
   );
 }

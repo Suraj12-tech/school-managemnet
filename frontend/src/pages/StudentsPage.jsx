@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
+import TableWrap from "../components/TableWrap.jsx";
 
 const emptyForm = {
   admissionNumber: "", firstName: "", lastName: "", dateOfBirth: "", gender: "",
@@ -82,9 +85,9 @@ export default function StudentsPage() {
 
   return (
     <div>
-      <h2>Student Management</h2>
+      <PageHeader title="Students" description="Maintain student records, enrollment, and account status." />
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={save}>
+      <form className="card form-card" onSubmit={save}>
         <h3>{editingId ? "Edit student" : "Create student"}</h3>
         <input required placeholder="Admission No" value={form.admissionNumber}
           onChange={(e) => setForm({ ...form, admissionNumber: e.target.value })} />
@@ -124,6 +127,7 @@ export default function StudentsPage() {
             onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}
         </div>
       </form>
+      <TableWrap>
       <table>
         <thead><tr><th>Admission No</th><th>Student Name</th><th>Class</th><th>Section</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
@@ -134,7 +138,7 @@ export default function StudentsPage() {
               <td>{student.firstName} {student.lastName}</td>
               <td>{currentSection ? className(currentSection.classId) : "—"}</td>
               <td>{currentSection?.name || "—"}</td>
-              <td>{student.status}</td>
+              <td><StatusBadge value={student.status} /></td>
               <td><button type="button" className="secondary" onClick={() => edit(student)}>View / edit</button>{" "}
                 <button type="button" onClick={() => toggleStatus(student)}>
                   {student.status === "ACTIVE" ? "Deactivate" : "Activate"}
@@ -143,6 +147,7 @@ export default function StudentsPage() {
           })}
         </tbody>
       </table>
+      </TableWrap>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
 
 export default function StudentProfilePage() {
   const { id } = useParams();
@@ -78,9 +79,11 @@ export default function StudentProfilePage() {
 
   return (
     <div>
-      <h2>Student Profile — {student.admissionNumber}</h2>
+      <PageHeader title={`Student profile — ${student.admissionNumber}`} description="Update the student record, enrollment, guardians, and documents." />
       {error && <p className="error">{error}</p>}
-      <div className="card">
+      <div className="profile-grid">
+      <div className="card form-card">
+        <h3>Student record</h3>
         <input value={student.admissionNumber} onChange={(e) => setStudent({ ...student, admissionNumber: e.target.value })} />
         <input value={student.firstName} onChange={(e) => setStudent({ ...student, firstName: e.target.value })} />
         <input value={student.lastName} onChange={(e) => setStudent({ ...student, lastName: e.target.value })} />
@@ -95,7 +98,7 @@ export default function StudentProfilePage() {
         </select>
         <button onClick={save}>Save profile</button>
       </div>
-      <div className="card">
+      <div className="card form-card">
         <h3>Enroll in section</h3>
         <select value={enroll.academicYearId} onChange={(e) => setEnroll({ ...enroll, academicYearId: e.target.value })}>
           <option value="">Year</option>
@@ -126,7 +129,7 @@ export default function StudentProfilePage() {
           ) : <p className="muted">No enrollment assigned.</p>;
         })()}
       </div>
-      <div className="card">
+      <div className="card form-card">
         <h3>Link guardian</h3>
         <select value={guardianId} onChange={(e) => setGuardianId(e.target.value)}>
           <option value="">Guardian</option>
@@ -140,15 +143,19 @@ export default function StudentProfilePage() {
         <button onClick={linkGuardian}>Link</button>
         <ul>{links.map((l) => <li key={l.guardianId}>Guardian #{l.guardianId} — {l.relationshipType} {l.primaryGuardian ? "(primary)" : ""} {l.emergencyContact ? "(emergency)" : ""} <button className="secondary" onClick={() => unlinkGuardian(l)}>Remove</button></li>)}</ul>
       </div>
-      <div className="card">
+      <div className="card form-card">
         <h3>Document metadata</h3>
         <input placeholder="Type" value={doc.documentType} onChange={(e) => setDoc({ ...doc, documentType: e.target.value })} />
         <input placeholder="File name" value={doc.fileName} onChange={(e) => setDoc({ ...doc, fileName: e.target.value })} />
         <button onClick={addDoc}>Add</button>
         <ul>{docs.map((d) => <li key={d.id}>{d.documentType}: {d.fileName}</li>)}</ul>
       </div>
-      <h3>Academic-year history</h3>
-      <ul>{history.map((h) => <li key={h.id}>Year {h.academicYearId} class {h.classId} — {h.resultStatus}</li>)}</ul>
+      </div>
+      <div className="card">
+        <h3>Academic-year history</h3>
+        <ul className="list">{history.map((h) => <li key={h.id}>Year {h.academicYearId} class {h.classId} — {h.resultStatus}</li>)}</ul>
+        {history.length === 0 && <p className="muted">No academic-year history yet.</p>}
+      </div>
     </div>
   );
 }

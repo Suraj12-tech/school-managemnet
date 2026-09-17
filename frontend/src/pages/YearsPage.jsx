@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
 
 const emptyYear = { name: "", startDate: "", endDate: "", status: "RUNNING" };
 const emptyTerm = { name: "", startDate: "", endDate: "", academicYearId: "", status: "ACTIVE" };
@@ -97,6 +99,7 @@ export default function YearsPage() {
   }
 
   async function removeTerm(id) {
+    if (!window.confirm("Delete this term? This cannot be undone.")) return;
     try {
       setError("");
       await api("/api/terms/" + id + "/delete", "POST");
@@ -143,11 +146,11 @@ export default function YearsPage() {
 
   return (
     <div>
-      <h2>Academic Year / Term Setup</h2>
+      <PageHeader title="Academic year & terms" description="Set the academic calendar used across enrollment and finance." />
       {message && <p className="ok">{message}</p>}
       {error && <p className="error">{error}</p>}
 
-      <form className="card" onSubmit={saveYear}>
+      <form className="card form-card" onSubmit={saveYear}>
         <h3>{editingYearId ? "Edit academic year" : "New academic year"}</h3>
         <input required placeholder="2026-2027" value={year.name} onChange={(e) => setYear({ ...year, name: e.target.value })} />
         <input required type="date" value={year.startDate} onChange={(e) => setYear({ ...year, startDate: e.target.value })} />
@@ -191,7 +194,7 @@ export default function YearsPage() {
         </div>
       )}
 
-      <form className="card" onSubmit={saveTerm}>
+      <form className="card form-card" onSubmit={saveTerm}>
         <h3>{editingTermId ? "Edit term" : "New term"}</h3>
         <select required value={term.academicYearId} onChange={(e) => setTerm({ ...term, academicYearId: e.target.value })}>
           <option value="">Select year</option>
@@ -222,7 +225,7 @@ export default function YearsPage() {
                 {yearTerms.map((item) => (
                   <tr key={item.id}>
                     <td><button type="button" className="linkish" onClick={() => setSelectedTerm(item)}>{item.name}</button></td>
-                    <td>{item.startDate}</td><td>{item.endDate}</td><td>{item.status === "ACTIVE" ? "RUNNING" : "END"}</td>
+                    <td>{item.startDate}</td><td>{item.endDate}</td><td><StatusBadge value={item.status === "ACTIVE" ? "RUNNING" : "END"} /></td>
                     <td><button type="button" className="secondary" onClick={() => editTerm(item)}>Edit</button>{" "}
                       <button type="button" onClick={() => updateTermStatus(item)}>{item.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>{" "}
                       <button type="button" onClick={() => removeTerm(item.id)}>Delete</button></td>

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
+import TableWrap from "../components/TableWrap.jsx";
 
 const emptyForm = {
   fullName: "", relationType: "FATHER", phone: "", email: "", address: "",
@@ -55,9 +58,9 @@ export default function GuardiansPage() {
 
   return (
     <div>
-      <h2>Guardian Management</h2>
+      <PageHeader title="Guardians" description="Manage guardian contact details and linked students." />
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={save}>
+      <form className="card form-card" onSubmit={save}>
         <input required placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
         <select value={form.relationType} onChange={(e) => setForm({ ...form, relationType: e.target.value })}>
           <option>FATHER</option><option>MOTHER</option><option>LEGAL_GUARDIAN</option><option>OTHER</option>
@@ -73,14 +76,16 @@ export default function GuardiansPage() {
         <div className="row"><button>{selected?.id ? "Update guardian" : "Save guardian"}</button>
           {selected && <button type="button" className="secondary" onClick={() => { setSelected(null); setForm(emptyForm); }}>Cancel</button>}</div>
       </form>
+      <TableWrap>
       <table>
         <thead><tr><th>Name</th><th>Relation</th><th>Phone</th><th>Email</th><th>Students</th><th>Status</th><th /></tr></thead>
         <tbody>{rows.map((g) => <tr key={g.id}>
           <td><button className="linkish" onClick={() => inspect(g.id)}>{g.fullName}</button></td>
-          <td>{g.relationType}</td><td>{g.phone}</td><td>{g.email}</td><td>{g.linkedStudentCount}</td><td>{g.status}</td>
+          <td>{g.relationType}</td><td>{g.phone}</td><td>{g.email}</td><td>{g.linkedStudentCount}</td><td><StatusBadge value={g.status} /></td>
           <td><button className="secondary" onClick={() => edit(g)}>Edit</button> <button onClick={() => toggleStatus(g)}>{g.status === "ACTIVE" ? "Deactivate" : "Activate"}</button></td>
         </tr>)}</tbody>
       </table>
+      </TableWrap>
       {selected?.students && <div className="card">
         <h3>{selected.fullName}</h3>
         <p>{selected.email} · {selected.phone} · {selected.address}</p>

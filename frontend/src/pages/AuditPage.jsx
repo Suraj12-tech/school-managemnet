@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import TableWrap from "../components/TableWrap.jsx";
 
 const emptyFilters = { userId: "", module: "", action: "", from: "", to: "" };
 
@@ -36,9 +38,9 @@ export default function AuditPage() {
 
   return (
     <div>
-      <h2>Audit Log</h2>
+      <PageHeader title="Audit log" description="Review important actions performed across the administrator portal." />
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={apply}>
+      <form className="card form-card" onSubmit={apply}>
         <select value={filters.userId} onChange={(e) => setFilters({ ...filters, userId: e.target.value })}>
           <option value="">All users</option>
           {users.map((user) => <option key={user.id} value={user.id}>{user.name} ({user.email})</option>)}
@@ -60,6 +62,7 @@ export default function AuditPage() {
         <button type="submit">Apply Filters</button>
         <button type="button" onClick={clear}>Clear</button>
       </form>
+      <TableWrap>
       <table>
         <thead><tr><th>When</th><th>User</th><th>Module</th><th>Action</th><th>Entity</th><th>Details</th><th>View</th></tr></thead>
         <tbody>{rows.map((row) => <tr key={row.id}>
@@ -70,6 +73,7 @@ export default function AuditPage() {
           <td><button type="button" onClick={() => setSelected(row)}>View</button></td>
         </tr>)}</tbody>
       </table>
+      </TableWrap>
       {selected && <div className="card">
         <h3>Audit Details</h3>
         <p>Timestamp: {selected.createdAt}</p>

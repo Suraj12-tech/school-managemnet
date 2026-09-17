@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -66,9 +68,9 @@ export default function InvoicesPage() {
 
   return (
     <div>
-      <h2>Invoice / Payment / Receipt</h2>
+      <PageHeader title="Invoices, payments & receipts" description="Create invoices, record payments, and review issued receipts." />
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={createInvoice}>
+      <form className="card form-card" onSubmit={createInvoice}>
         <h3>Create invoice from fee structure</h3>
         <select required value={form.studentId} onChange={(e) => setForm({ ...form, studentId: e.target.value })}>
           <option value="">Student</option>
@@ -90,7 +92,7 @@ export default function InvoicesPage() {
             <td>{invoice.invoiceNumber}</td><td>{invoice.student || invoice.studentId}</td>
             <td>{invoice.feeStructure || invoice.feeStructureId || "-"}</td>
             <td>{Number(invoice.totalAmount).toFixed(2)}</td><td>{Number(invoice.paidAmount).toFixed(2)}</td>
-            <td>{Number(invoice.outstanding).toFixed(2)}</td><td>{invoice.status}</td>
+            <td>{Number(invoice.outstanding).toFixed(2)}</td><td><StatusBadge value={invoice.status} /></td>
             <td><button type="button" onClick={() => viewInvoice(invoice)}>View</button></td>
           </tr>
         ))}</tbody>
@@ -103,7 +105,7 @@ export default function InvoicesPage() {
         <button type="button" onClick={() => setViewingInvoice(null)}>Close</button>
       </div>}
 
-      <form className="card" onSubmit={payInvoice}>
+      <form className="card form-card" onSubmit={payInvoice}>
         <h3>Record payment</h3>
         <select required value={pay.invoiceId} onChange={(e) => setPay({ ...pay, invoiceId: e.target.value, amount: "" })}>
           <option value="">Unpaid or partial invoice</option>

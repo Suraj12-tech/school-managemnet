@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
 
 export default function FeeAccountsPage() {
   const [rows, setRows] = useState([]);
@@ -37,7 +39,7 @@ export default function FeeAccountsPage() {
 
   return (
     <div>
-      <h2>Student Fee Accounts</h2>
+      <PageHeader title="Student fee accounts" description="Review balances, payments, concessions, and outstanding amounts." />
       <select value={yearId} onChange={(e) => { setYearId(e.target.value); load(e.target.value); }}>
         <option value="">All years</option>
         {years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
@@ -49,10 +51,10 @@ export default function FeeAccountsPage() {
           <td>{row.student || row.studentId}</td><td>{row.academicYear || row.academicYearId}</td>
           <td>{Number(row.totalDue).toFixed(2)}</td><td>{Number(row.totalPaid).toFixed(2)}</td>
           <td>{Number(row.concessionAmount).toFixed(2)}</td><td><strong>{Number(row.outstanding).toFixed(2)}</strong></td>
-          <td>{row.status}</td><td><button type="button" onClick={() => setSelected(row)}>View</button></td>
+          <td><StatusBadge value={row.status} /></td><td><button type="button" onClick={() => setSelected(row)}>View</button></td>
         </tr>)}</tbody>
       </table>
-      <form className="card" onSubmit={apply}>
+      <form className="card form-card" onSubmit={apply}>
         <h3>Apply concession</h3>
         <select required value={concession.studentId} onChange={(e) => setConcession({ ...concession, studentId: e.target.value })}>
           <option value="">Student</option>
@@ -74,7 +76,7 @@ export default function FeeAccountsPage() {
         </table>
         <h4>Payment history</h4>
         <table><thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
-          <tbody>{(selected.payments || []).map((payment, index) => <tr key={`${payment.receiptNumber}-${index}`}><td>{payment.date}</td><td>{payment.receiptNumber || "-"}</td><td>{payment.amount}</td><td>{payment.method}</td><td>{payment.status}</td></tr>)}</tbody>
+          <tbody>{(selected.payments || []).map((payment, index) => <tr key={`${payment.receiptNumber}-${index}`}><td>{payment.date}</td><td>{payment.receiptNumber || "-"}</td><td>{payment.amount}</td><td>{payment.method}</td><td><StatusBadge value={payment.status} /></td></tr>)}</tbody>
         </table>
         <button type="button" onClick={() => setSelected(null)}>Close</button>
       </div>}

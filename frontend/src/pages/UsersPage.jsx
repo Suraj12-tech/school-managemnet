@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import PasswordField from "../components/PasswordField.jsx";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
+import TableWrap from "../components/TableWrap.jsx";
 
 const emptyForm = {
   username: "", email: "", password: "", fullName: "", phone: "", status: "ACTIVE",
@@ -98,10 +101,10 @@ export default function UsersPage() {
 
   return (
     <div>
-      <h2>User Management</h2>
+      <PageHeader title="Users" description="Manage administrator accounts, roles, access scopes, and status." />
       {error && <p className="error">{error}</p>}
       {message && <p className="ok">{message}</p>}
-      <form className="card" onSubmit={save}>
+      <form className="card form-card" onSubmit={save}>
         <h3>{selectedId ? "Edit user" : "Create user"}</h3>
         <input required placeholder="Username" value={form.username}
           onChange={(e) => setForm({ ...form, username: e.target.value })} />
@@ -152,6 +155,7 @@ export default function UsersPage() {
             onClick={() => { setSelectedId(null); setForm(emptyForm); }}>Cancel</button>}
         </div>
       </form>
+      <TableWrap>
       <table>
         <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Scope</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
@@ -161,7 +165,7 @@ export default function UsersPage() {
               <td>{user.email}</td>
               <td>{(user.roles || []).map((role) => role.name).join(", ") || "—"}</td>
               <td>{(user.scopes || []).map((scope) => `${scope.scopeType}:${scope.scopeId}`).join(", ") || "—"}</td>
-              <td>{user.status}</td>
+              <td><StatusBadge value={user.status} /></td>
               <td>
                 <button className="secondary" onClick={() => editUser(user)}>View / edit</button>{" "}
                 <button onClick={() => toggleStatus(user)}>
@@ -172,6 +176,7 @@ export default function UsersPage() {
           ))}
         </tbody>
       </table>
+      </TableWrap>
     </div>
   );
 }

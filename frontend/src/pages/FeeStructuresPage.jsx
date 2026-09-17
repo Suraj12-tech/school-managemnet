@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
+import TableWrap from "../components/TableWrap.jsx";
 
 const emptyForm = { name: "", category: "GENERAL", academicYearId: "", classId: "", status: "ACTIVE", items: [] };
 
@@ -83,8 +86,8 @@ export default function FeeStructuresPage() {
 
   return (
     <div>
-      <h2>Fee Structures</h2>
-      <form className="card" onSubmit={save}>
+      <PageHeader title="Fee structures" description="Combine fee heads into charges for a class and academic year." />
+      <form className="card form-card" onSubmit={save}>
         <input required placeholder="Structure name" value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
@@ -119,17 +122,19 @@ export default function FeeStructuresPage() {
         {editing && <button type="button" onClick={() => { setEditing(null); setForm(emptyForm); }}>Cancel</button>}
       </form>
       {error && <div className="error">{error}</div>}
+      <TableWrap>
       <table>
         <thead><tr><th>Name</th><th>Category</th><th>Academic Year</th><th>Class</th><th>Total Amount</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>{structures.map((row) => <tr key={row.id}>
           <td>{row.name}</td><td>{row.category}</td><td>{row.academicYear || row.academicYearId}</td>
-          <td>{row.className || row.classId}</td><td>{Number(row.totalAmount || 0).toFixed(2)}</td><td>{row.status}</td>
+          <td>{row.className || row.classId}</td><td>{Number(row.totalAmount || 0).toFixed(2)}</td><td><StatusBadge value={row.status} /></td>
           <td><button type="button" onClick={() => open(row)}>View</button>{" "}
             <button type="button" onClick={() => edit(row)}>Edit</button>{" "}
             <button type="button" onClick={() => changeStatus(row)}>{row.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>{" "}
             <button type="button" onClick={() => remove(row)}>Delete</button></td>
         </tr>)}</tbody>
       </table>
+      </TableWrap>
       {viewing && <div className="card">
         <h3>{viewing.name}</h3>
         <p>{viewing.category} | {viewing.academicYear} | {viewing.className} | Total: {Number(viewing.totalAmount || 0).toFixed(2)}</p>

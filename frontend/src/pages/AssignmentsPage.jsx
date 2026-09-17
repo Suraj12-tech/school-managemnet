@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
+import TableWrap from "../components/TableWrap.jsx";
 
 const emptyForm = {
   staffId: "", subjectId: "", classId: "", sectionId: "", academicYearId: "",
@@ -73,6 +76,7 @@ export default function AssignmentsPage() {
   }
 
   async function unassign(row) {
+    if (!window.confirm(`Unassign ${row.teacherName || "this teacher"}?`)) return;
     try {
       await api(`/api/teacher-assignments/${row.id}`, "DELETE");
       await load();
@@ -86,10 +90,10 @@ export default function AssignmentsPage() {
 
   return (
     <div>
-      <h2>Teacher Assignment Management</h2>
+      <PageHeader title="Teacher assignments" description="Assign subject and class teachers for each academic year." />
       <p className="muted">Subject teachers require a subject; class teachers are assigned to one section.</p>
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={save}>
+      <form className="card form-card" onSubmit={save}>
         <h3>{editingId ? "Edit assignment" : "New assignment"}</h3>
         <select required value={form.assignmentType}
           onChange={(e) => setForm({ ...form, assignmentType: e.target.value, subjectId: "" })}>
@@ -134,6 +138,7 @@ export default function AssignmentsPage() {
             onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}
         </div>
       </form>
+      <TableWrap>
       <table>
         <thead><tr><th>Teacher</th><th>Subject</th><th>Class</th><th>Section</th><th>Academic Year</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
@@ -142,7 +147,7 @@ export default function AssignmentsPage() {
             <td>{row.subjectName || "—"}</td><td>{row.className || `#${row.classId}`}</td>
             <td>{row.sectionName || "—"}</td><td>{row.academicYearName || `#${row.academicYearId}`}</td>
             <td>{row.assignmentType === "CLASS_TEACHER" ? "Class Teacher" : "Subject Teacher"}</td>
-            <td>{row.status}</td>
+            <td><StatusBadge value={row.status} /></td>
             <td><button type="button" className="secondary" onClick={() => edit(row)}>Edit</button>{" "}
               {row.status === "ACTIVE"
                 ? <button type="button" onClick={() => setStatus(row, "INACTIVE")}>Deactivate</button>
@@ -151,6 +156,7 @@ export default function AssignmentsPage() {
           </tr>)}
         </tbody>
       </table>
+      </TableWrap>
     </div>
   );
 }

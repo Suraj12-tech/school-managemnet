@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
 
 export default function SchoolPage() {
   const [school, setSchool] = useState(null);
@@ -65,7 +66,7 @@ export default function SchoolPage() {
   if (!school) {
     return (
       <div>
-        <h2>School Profile</h2>
+        <PageHeader title="School profile" description="Manage the school identity and its campuses." />
         {error ? <p className="error">{error}</p> : <p>Loading school profile...</p>}
       </div>
     );
@@ -73,10 +74,10 @@ export default function SchoolPage() {
 
   return (
     <div>
-      <h2>School Profile</h2>
+      <PageHeader title="School profile" description="Manage the school identity and its campuses." />
       {msg && <p className="ok">{msg}</p>}
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={save}>
+      <form className="card form-card" onSubmit={save}>
         <label>Name</label>
         <input value={school.name || ""} onChange={(e) => setSchool({ ...school, name: e.target.value })} />
         <label>Code</label>

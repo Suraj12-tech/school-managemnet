@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
+import TableWrap from "../components/TableWrap.jsx";
 
 export default function FeeHeadsPage() {
   const [rows, setRows] = useState([]);
@@ -37,8 +40,8 @@ export default function FeeHeadsPage() {
 
   return (
     <div>
-      <h2>Fee Heads</h2>
-      <form className="card" onSubmit={save}>
+      <PageHeader title="Fee heads" description="Define the charges used to build fee structures." />
+      <form className="card form-card" onSubmit={save}>
         <input required placeholder="Tuition" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <input required placeholder="TUI" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
         <input placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
@@ -47,16 +50,18 @@ export default function FeeHeadsPage() {
         {editing && <button type="button" onClick={() => { setEditing(null); setForm(empty); }}>Cancel</button>}
       </form>
       {error && <div className="error">{error}</div>}
+      <TableWrap>
       <table>
         <thead><tr><th>Name</th><th>Code</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>{rows.map((r) => <tr key={r.id}>
-          <td>{r.name}</td><td>{r.code}</td><td>{r.description || "-"}</td><td>{r.status}</td>
+          <td>{r.name}</td><td>{r.code}</td><td>{r.description || "-"}</td><td><StatusBadge value={r.status} /></td>
           <td><button type="button" onClick={() => window.alert(`${r.name}\n${r.description || "No description"}`)}>View</button>{" "}
             <button type="button" onClick={() => { setEditing(r); setForm({ name: r.name, code: r.code, description: r.description || "", status: r.status || "ACTIVE" }); }}>Edit</button>{" "}
             <button type="button" onClick={() => changeStatus(r)}>{r.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>{" "}
             <button type="button" onClick={() => remove(r)}>Delete</button></td>
         </tr>)}</tbody>
       </table>
+      </TableWrap>
     </div>
   );
 }

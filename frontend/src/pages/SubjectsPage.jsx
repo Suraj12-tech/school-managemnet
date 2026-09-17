@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
 
 const emptyDepartment = { name: "", code: "", description: "", status: "ACTIVE" };
 const emptySubject = { name: "", code: "", departmentId: "", description: "", status: "ACTIVE" };
@@ -134,6 +136,7 @@ export default function SubjectsPage() {
   }
 
   async function deleteDepartment(id) {
+    if (!window.confirm("Delete this department? This cannot be undone.")) return;
     clearFeedback();
     try {
       await api(`/api/departments/${id}`, "DELETE");
@@ -145,6 +148,7 @@ export default function SubjectsPage() {
   }
 
   async function deleteSubject(id) {
+    if (!window.confirm("Delete this subject? This cannot be undone.")) return;
     clearFeedback();
     try {
       await api(`/api/subjects/${id}`, "DELETE");
@@ -210,11 +214,11 @@ export default function SubjectsPage() {
 
   return (
     <div>
-      <h2>Subject & Department Management</h2>
+      <PageHeader title="Departments & subjects" description="Organize the academic catalog and map subjects to classes." />
       {message && <p className="ok">{message}</p>}
       {error && <p className="error">{error}</p>}
 
-      <form className="card" onSubmit={saveDepartment}>
+      <form className="card form-card" onSubmit={saveDepartment}>
         <h3>{editingDepartmentId ? "Edit department" : "New department"}</h3>
         <input required placeholder="Department name" value={department.name}
           onChange={(e) => setDepartment({ ...department, name: e.target.value })} />
@@ -241,7 +245,7 @@ export default function SubjectsPage() {
               <td>{item.name}</td>
               <td>{item.subjectCount}</td>
               <td>{item.staffCount}</td>
-              <td>{item.status}</td>
+              <td><StatusBadge value={item.status} /></td>
               <td>
                 <button type="button" onClick={() => viewDepartment(item.id)}>View</button>{" "}
                 <button type="button" onClick={() => editDepartment(item)}>Edit</button>{" "}
@@ -256,7 +260,7 @@ export default function SubjectsPage() {
         </tbody>
       </table>
 
-      <form className="card" onSubmit={saveSubject}>
+      <form className="card form-card" onSubmit={saveSubject}>
         <h3>{editingSubjectId ? "Edit subject" : "New subject"}</h3>
         <input required placeholder="Subject name" value={subject.name}
           onChange={(e) => setSubject({ ...subject, name: e.target.value })} />
@@ -291,7 +295,7 @@ export default function SubjectsPage() {
               <td>{item.code}</td>
               <td>{item.departmentName}</td>
               <td>{item.classIds?.length || 0}</td>
-              <td>{item.status}</td>
+              <td><StatusBadge value={item.status} /></td>
               <td>
                 <button type="button" onClick={() => viewSubject(item.id)}>View</button>{" "}
                 <button type="button" onClick={() => editSubject(item)}>Edit</button>{" "}

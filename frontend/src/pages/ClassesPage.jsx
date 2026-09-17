@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
 
 export default function ClassesPage() {
   const [classes, setClasses] = useState([]);
@@ -124,9 +125,9 @@ export default function ClassesPage() {
 
   return (
     <div>
-      <h2>Class & Section Management</h2>
+      <PageHeader title="Classes & sections" description="Create classes, organize sections, and assign class teachers." />
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={saveClass}>
+      <form className="card form-card" onSubmit={saveClass}>
         <h3>New class</h3>
         <input required placeholder="Class 1" value={klass.name} onChange={(e) => setKlass({ ...klass, name: e.target.value })} />
         <label>Number of classrooms</label>
@@ -140,7 +141,7 @@ export default function ClassesPage() {
           {classes.map((c) => <tr key={c.id}><td>{c.name}</td><td>{c.numberOfClassrooms}</td></tr>)}
         </tbody>
       </table>
-      <form className="card" onSubmit={saveSection}>
+      <form className="card form-card" onSubmit={saveSection}>
         <h3>{editingSectionId ? "Edit section" : "New section"}</h3>
         <select required value={section.classId} onChange={(e) => setSection({ ...section, classId: e.target.value })}>
           <option value="">Class</option>

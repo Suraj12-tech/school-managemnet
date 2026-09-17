@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
 
 export default function RolesPage() {
   const [roles, setRoles] = useState([]);
@@ -42,7 +43,7 @@ export default function RolesPage() {
 
   return (
     <div>
-      <h2>Role & Permission Management</h2>
+      <PageHeader title="Roles & permissions" description="Control what each role can view and manage in the portal." />
       {error && <p className="error">{error}</p>}
       <p className="muted">Permissions are enforced on the backend, not only by hiding menu items.</p>
       <div className="split">

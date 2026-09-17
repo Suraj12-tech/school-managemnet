@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
+import TableWrap from "../components/TableWrap.jsx";
 
 const emptyForm = {
   employeeId: "", fullName: "", designation: "", departmentId: "", email: "", phone: "", status: "ACTIVE"
@@ -79,9 +82,9 @@ export default function StaffPage() {
 
   return (
     <div>
-      <h2>Staff Management</h2>
+      <PageHeader title="Staff" description="Maintain staff records and review teaching assignments." />
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={save}>
+      <form className="card form-card" onSubmit={save}>
         <h3>{editingId ? "Edit staff" : "Create staff"}</h3>
         <input required placeholder="Employee ID" value={form.employeeId}
           onChange={(e) => setForm({ ...form, employeeId: e.target.value })} />
@@ -108,12 +111,13 @@ export default function StaffPage() {
             onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}
         </div>
       </form>
+      <TableWrap>
       <table>
         <thead><tr><th>Employee ID</th><th>Name</th><th>Designation</th><th>Department</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           {rows.map((staff) => <tr key={staff.id}>
             <td>{staff.employeeId}</td><td>{staff.fullName}</td><td>{staff.designation}</td>
-            <td>{departmentLabel(staff)}</td><td>{staff.email}</td><td>{staff.status}</td>
+            <td>{departmentLabel(staff)}</td><td>{staff.email}</td><td><StatusBadge value={staff.status} /></td>
             <td><button type="button" className="secondary" onClick={() => view(staff)}>View</button>{" "}
               <button type="button" className="secondary" onClick={() => edit(staff)}>Edit</button>{" "}
               <button type="button" onClick={() => toggleStatus(staff)}>
@@ -122,6 +126,7 @@ export default function StaffPage() {
           </tr>)}
         </tbody>
       </table>
+      </TableWrap>
       {profile && <div className="card">
         <h3>Staff Profile — {profile.employeeId}</h3>
         <p><strong>Name:</strong> {profile.fullName}</p>

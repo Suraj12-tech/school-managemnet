@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import PageHeader from "../components/PageHeader.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
 
 export default function ReportsPage() {
   const [report, setReport] = useState({ dues: [], collections: [], summary: {} });
@@ -45,9 +47,9 @@ export default function ReportsPage() {
   const summary = report.summary || {};
   return (
     <div>
-      <h2>Fee Dues & Collection Reports</h2>
+      <PageHeader title="Fee dues & collection reports" description="Filter balances and collections by academic period, class, and status." />
       {error && <p className="error">{error}</p>}
-      <form className="card" onSubmit={applyFilters}>
+      <form className="card form-card" onSubmit={applyFilters}>
         <h3>Filters</h3>
         <select value={filters.academicYearId} onChange={(e) => updateFilter("academicYearId", e.target.value)}>
           <option value="">All academic years</option>
@@ -85,7 +87,7 @@ export default function ReportsPage() {
         <tbody>{report.dues.map((row) => <tr key={row.id}>
           <td>{row.student || row.studentId}</td><td>{row.className || "-"}</td><td>{row.section || "-"}</td>
           <td>{Number(row.totalDue).toFixed(2)}</td><td>{Number(row.totalPaid).toFixed(2)}</td>
-          <td>{Number(row.concessionAmount).toFixed(2)}</td><td>{Number(row.outstanding).toFixed(2)}</td><td>{row.status}</td>
+          <td>{Number(row.concessionAmount).toFixed(2)}</td><td>{Number(row.outstanding).toFixed(2)}</td><td><StatusBadge value={row.status} /></td>
         </tr>)}</tbody>
       </table>
 

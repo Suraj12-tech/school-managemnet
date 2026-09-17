@@ -3,9 +3,11 @@ package com.schoolenterprise.school.controller;
 import com.schoolenterprise.common.api.ApiResponse;
 import com.schoolenterprise.common.security.RequirePermission;
 import com.schoolenterprise.school.dto.AcademicYearRequest;
+import com.schoolenterprise.school.dto.CalendarEventRequest;
 import com.schoolenterprise.school.dto.StatusRequest;
 import com.schoolenterprise.school.dto.TermRequest;
 import com.schoolenterprise.school.entity.AcademicYear;
+import com.schoolenterprise.school.entity.CalendarEvent;
 import com.schoolenterprise.school.entity.Campus;
 import com.schoolenterprise.school.entity.School;
 import com.schoolenterprise.school.entity.Term;
@@ -129,6 +131,53 @@ public class SchoolController {
     @RequirePermission(module = "school", action = "delete")
     public ApiResponse<Void> deleteTermByPost(@PathVariable Long id) {
         schoolService.deleteTerm(id);
+        return ApiResponse.ok(null);
+    }
+
+    @GetMapping("/calendar-events")
+    @RequirePermission(module = "school", action = "view")
+    public ApiResponse<List<CalendarEvent>> events(@RequestParam(required = false) Long academicYearId,
+                                                   @RequestParam(required = false) String eventType) {
+        return ApiResponse.ok(schoolService.events(academicYearId, eventType));
+    }
+
+    @GetMapping("/calendar-events/{id}")
+    @RequirePermission(module = "school", action = "view")
+    public ApiResponse<CalendarEvent> event(@PathVariable Long id) {
+        return ApiResponse.ok(schoolService.event(id));
+    }
+
+    @PostMapping("/calendar-events")
+    @RequirePermission(module = "school", action = "create")
+    public ApiResponse<CalendarEvent> saveEvent(@Valid @RequestBody CalendarEventRequest request) {
+        return ApiResponse.ok(schoolService.saveEvent(null, request));
+    }
+
+    @PutMapping("/calendar-events/{id}")
+    @RequirePermission(module = "school", action = "edit")
+    public ApiResponse<CalendarEvent> updateEvent(@PathVariable Long id,
+                                                  @Valid @RequestBody CalendarEventRequest request) {
+        return ApiResponse.ok(schoolService.saveEvent(id, request));
+    }
+
+    @PatchMapping("/calendar-events/{id}/status")
+    @RequirePermission(module = "school", action = "edit")
+    public ApiResponse<CalendarEvent> updateEventStatus(@PathVariable Long id,
+                                                        @Valid @RequestBody StatusRequest request) {
+        return ApiResponse.ok(schoolService.updateEventStatus(id, request.getStatus()));
+    }
+
+    @DeleteMapping("/calendar-events/{id}")
+    @RequirePermission(module = "school", action = "delete")
+    public ApiResponse<Void> deleteEvent(@PathVariable Long id) {
+        schoolService.deleteEvent(id);
+        return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/calendar-events/{id}/delete")
+    @RequirePermission(module = "school", action = "delete")
+    public ApiResponse<Void> deleteEventByPost(@PathVariable Long id) {
+        schoolService.deleteEvent(id);
         return ApiResponse.ok(null);
     }
 }

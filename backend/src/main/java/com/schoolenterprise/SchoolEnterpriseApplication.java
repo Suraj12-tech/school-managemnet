@@ -9,5 +9,6 @@ public class SchoolEnterpriseApplication {
     public static void main(String[] args) {
         SpringApplication.run(SchoolEnterpriseApplication.class, args);
         //safe
+        //safe-2
     }
 }

@@ -96,12 +96,99 @@ public class DataSeeder implements CommandLineRunner {
                     Permission p = new Permission();
                     p.setModuleName(module);
                     p.setActionName(action);
-                    p.setDescription(module + " " + action);
+                    p.setDescription(generateDescription(module, action));
                     p.setSensitivity("fees".equals(module) ? "FINANCIAL" : "staff".equals(module) ? "HR_RESTRICTED" : "NORMAL");
                     return permissionRepository.save(p);
                 });
             }
         }
+    }
+
+    private String generateDescription(String module, String action) {
+        return switch (module) {
+            case "students" -> switch (action) {
+                case "view" -> "View student profiles, admissions, and guardian details";
+                case "create" -> "Add new student admission and registration records";
+                case "edit" -> "Edit student information, guardian contacts, and enrollment status";
+                case "delete" -> "Delete student profiles and admission records";
+                case "approve" -> "Approve student admissions and class enrollments";
+                case "export" -> "Export student lists and class registers";
+                default -> "Publish class promotion and student academic rosters";
+            };
+            case "staff" -> switch (action) {
+                case "view" -> "View staff directory, employee records, and designations";
+                case "create" -> "Add new teachers and administrative staff";
+                case "edit" -> "Manage staff information, assignments, and employment status";
+                case "delete" -> "Delete staff and employee records";
+                case "approve" -> "Approve staff onboarding, leave requests, and assignments";
+                case "export" -> "Export staff directory and employee reports";
+                default -> "Publish official notices and circulars to staff";
+            };
+            case "classes" -> switch (action) {
+                case "view" -> "View classes, sections, and room capacities";
+                case "create" -> "Add new classes and section divisions";
+                case "edit" -> "Manage class names, room capacities, and section details";
+                case "delete" -> "Delete unused classes and sections";
+                case "approve" -> "Approve section configurations and capacity adjustments";
+                case "export" -> "Export class rosters and section distribution lists";
+                default -> "Publish finalized class rosters";
+            };
+            case "subjects" -> switch (action) {
+                case "view" -> "View departments and subject catalogs";
+                case "create" -> "Add academic departments and subject courses";
+                case "edit" -> "Manage subjects, course codes, and department mappings";
+                case "delete" -> "Delete inactive subjects and departments";
+                case "approve" -> "Approve curriculum plans and subject offerings";
+                case "export" -> "Export complete subject catalog and department lists";
+                default -> "Publish subject curriculum and course details";
+            };
+            case "fees" -> switch (action) {
+                case "view" -> "View fee heads, student fee accounts, and invoices";
+                case "create" -> "Create fee structures, heads, and generate invoices";
+                case "edit" -> "Manage fees, payment collections, and fee structures";
+                case "delete" -> "Cancel unpaid invoices and remove unbilled fee items";
+                case "approve" -> "Approve fee concessions, waivers, and adjustments";
+                case "export" -> "Export financial summaries and fee collection reports";
+                default -> "Publish fee circulars and schedule announcements";
+            };
+            case "users" -> switch (action) {
+                case "view" -> "View administrator accounts and configured roles";
+                case "create" -> "Add new portal user logins and custom roles";
+                case "edit" -> "Manage user accounts, roles, and permission assignments";
+                case "delete" -> "Delete user accounts and custom roles";
+                case "approve" -> "Approve access and privilege elevation requests";
+                case "export" -> "Export user list and role assignments";
+                default -> "Publish security and access policies";
+            };
+            case "school" -> switch (action) {
+                case "view" -> "View school profile, academic years, and school calendar";
+                case "create" -> "Add academic years, terms, and calendar events";
+                case "edit" -> "Manage school settings, academic terms, and calendar events";
+                case "delete" -> "Delete terms and calendar events";
+                case "approve" -> "Approve official annual school calendar schedules";
+                case "export" -> "Export official school calendar and event lists";
+                default -> "Publish official academic calendar to school portals";
+            };
+            case "audit" -> switch (action) {
+                case "view" -> "View system audit trail and administrator action logs";
+                case "create" -> "Record administrative notes in the audit log";
+                case "edit" -> "Manage audit log settings and tracking policies";
+                case "delete" -> "Archive or purge old audit log records";
+                case "approve" -> "Approve compliance audit review reports";
+                case "export" -> "Export system audit trail and compliance reports";
+                default -> "Publish compliance summaries to school management";
+            };
+            case "dashboard" -> switch (action) {
+                case "view" -> "View executive dashboard, KPI summaries, and statistics";
+                case "create" -> "Create custom reports and dashboard widgets";
+                case "edit" -> "Customize dashboard layout, cards, and default views";
+                case "delete" -> "Delete saved custom report configurations";
+                case "approve" -> "Approve periodic executive and operational summaries";
+                case "export" -> "Export executive reports and summary analytics";
+                default -> "Publish school-wide dashboard announcements";
+            };
+            default -> module + " " + action;
+        };
     }
 
     private Role seedRole(String name, String description, String sensitivity, boolean allPermissions) {

@@ -9,6 +9,7 @@ import com.schoolenterprise.academics.dto.DepartmentDetail;
 import com.schoolenterprise.academics.dto.DepartmentRequest;
 import com.schoolenterprise.academics.dto.DepartmentSummary;
 import com.schoolenterprise.academics.dto.SchoolClassRequest;
+import com.schoolenterprise.academics.dto.SectionDetailResponse;
 import com.schoolenterprise.academics.dto.SectionRequest;
 import com.schoolenterprise.academics.dto.SectionSummary;
 import com.schoolenterprise.academics.dto.SubjectClassMappingRequest;
@@ -16,6 +17,8 @@ import com.schoolenterprise.academics.dto.SubjectClassMappingView;
 import com.schoolenterprise.academics.dto.SubjectDetail;
 import com.schoolenterprise.academics.dto.SubjectRequest;
 import com.schoolenterprise.academics.dto.SubjectSummary;
+import com.schoolenterprise.academics.dto.TimetableEntryRequest;
+import com.schoolenterprise.academics.dto.TimetableEntryResponse;
 import com.schoolenterprise.school.dto.StatusRequest;
 import com.schoolenterprise.academics.service.AcademicsService;
 import com.schoolenterprise.common.api.ApiResponse;
@@ -161,6 +164,12 @@ public class AcademicsController {
         return ApiResponse.ok(academicsService.sections());
     }
 
+    @GetMapping("/sections/{id}/detail")
+    @RequirePermission(module = "classes", action = "view")
+    public ApiResponse<SectionDetailResponse> sectionDetail(@PathVariable Long id) {
+        return ApiResponse.ok(academicsService.sectionDetail(id));
+    }
+
     @PostMapping("/sections")
     @RequirePermission(module = "classes", action = "create")
     public ApiResponse<Section> saveSection(@Valid @RequestBody SectionRequest request) {
@@ -198,6 +207,44 @@ public class AcademicsController {
     @RequirePermission(module = "classes", action = "delete")
     public ApiResponse<Void> deleteSection(@PathVariable Long id) {
         academicsService.deleteSection(id);
+        return ApiResponse.ok(null);
+    }
+
+    // ================= Timetable Endpoints =================
+
+    @GetMapping("/timetable")
+    @RequirePermission(module = "classes", action = "view")
+    public ApiResponse<List<TimetableEntryResponse>> timetableEntries(
+            @RequestParam(required = false) Long sectionId,
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long academicYearId,
+            @RequestParam(required = false) Long staffId) {
+        return ApiResponse.ok(academicsService.timetableEntries(sectionId, classId, academicYearId, staffId));
+    }
+
+    @GetMapping("/timetable/{id}")
+    @RequirePermission(module = "classes", action = "view")
+    public ApiResponse<TimetableEntryResponse> timetableEntry(@PathVariable Long id) {
+        return ApiResponse.ok(academicsService.timetableEntry(id));
+    }
+
+    @PostMapping("/timetable")
+    @RequirePermission(module = "classes", action = "create")
+    public ApiResponse<TimetableEntryResponse> createTimetableEntry(@Valid @RequestBody TimetableEntryRequest request) {
+        return ApiResponse.ok(academicsService.saveTimetableEntry(null, request));
+    }
+
+    @PutMapping("/timetable/{id}")
+    @RequirePermission(module = "classes", action = "edit")
+    public ApiResponse<TimetableEntryResponse> updateTimetableEntry(@PathVariable Long id,
+                                                                    @Valid @RequestBody TimetableEntryRequest request) {
+        return ApiResponse.ok(academicsService.saveTimetableEntry(id, request));
+    }
+
+    @DeleteMapping("/timetable/{id}")
+    @RequirePermission(module = "classes", action = "delete")
+    public ApiResponse<Void> deleteTimetableEntry(@PathVariable Long id) {
+        academicsService.deleteTimetableEntry(id);
         return ApiResponse.ok(null);
     }
 }

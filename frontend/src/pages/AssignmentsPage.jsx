@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 
-const emptyForm = {
-  staffId: "", subjectId: "", classId: "", sectionId: "", academicYearId: "",
-  assignmentType: "SUBJECT_TEACHER", status: "ACTIVE"
-};
-
 export default function AssignmentsPage() {
   const [rows, setRows] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -13,142 +8,58 @@ export default function AssignmentsPage() {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [years, setYears] = useState([]);
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState(null);
-  const [error, setError] = useState("");
+  const [form, setForm] = useState({ staffId: "", subjectId: "", classId: "", sectionId: "", academicYearId: "" });
 
   async function load() {
-    try {
-      setError("");
-      const [assignmentData, staffData, subjectData, classData, sectionData, yearData] = await Promise.all([
-        api("/api/teacher-assignments"), api("/api/staff"), api("/api/subjects"),
-        api("/api/classes"), api("/api/sections"), api("/api/academic-years")
-      ]);
-      setRows(assignmentData || []);
-      setStaff(staffData || []);
-      setSubjects(subjectData || []);
-      setClasses(classData || []);
-      setSections(sectionData || []);
-      setYears(yearData || []);
-    } catch (err) { setError(err.message); }
+    setRows(await api("/api/teacher-assignments"));
+    setStaff(await api("/api/staff"));
+    setSubjects(await api("/api/subjects"));
+    setClasses(await api("/api/classes"));
+    setSections(await api("/api/sections"));
+    setYears(await api("/api/academic-years"));
   }
   useEffect(() => { load(); }, []);
 
-  async function save(event) {
-    event.preventDefault();
-    try {
-      setError("");
-      const payload = {
-        ...form,
-        staffId: Number(form.staffId),
-        subjectId: form.assignmentType === "CLASS_TEACHER" ? undefined : Number(form.subjectId),
-        classId: Number(form.classId),
-        sectionId: form.sectionId ? Number(form.sectionId) : undefined,
-        academicYearId: Number(form.academicYearId)
-      };
-      await api(editingId ? `/api/teacher-assignments/${editingId}` : "/api/teacher-assignments",
-        editingId ? "PUT" : "POST", payload);
-      setForm(emptyForm);
-      setEditingId(null);
-      await load();
-    } catch (err) { setError(err.message); }
-  }
-
-  function edit(row) {
-    setEditingId(row.id);
-    setForm({
-      staffId: String(row.staffId), subjectId: row.subjectId ? String(row.subjectId) : "",
-      classId: String(row.classId), sectionId: row.sectionId ? String(row.sectionId) : "",
-      academicYearId: String(row.academicYearId), assignmentType: row.assignmentType || "SUBJECT_TEACHER",
-      status: row.status || "ACTIVE"
+  async function save(e) {
+    e.preventDefault();
+    await api("/api/teacher-assignments", "POST", {
+      staffId: Number(form.staffId),
+      subjectId: Number(form.subjectId),
+      classId: Number(form.classId),
+      sectionId: form.sectionId ? Number(form.sectionId) : null,
+      academicYearId: Number(form.academicYearId)
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    load();
   }
-
-  async function setStatus(row, status) {
-    try {
-      await api(`/api/teacher-assignments/${row.id}/status`, "PATCH", { status });
-      await load();
-    } catch (err) { setError(err.message); }
-  }
-
-  async function unassign(row) {
-    try {
-      await api(`/api/teacher-assignments/${row.id}`, "DELETE");
-      await load();
-    } catch (err) { setError(err.message); }
-  }
-
-  const filteredSections = sections.filter((section) =>
-    (!form.classId || String(section.classId) === String(form.classId))
-    && (!form.academicYearId || String(section.academicYearId) === String(form.academicYearId))
-  );
 
   return (
     <div>
       <h2>Teacher Assignment Management</h2>
-      <p className="muted">Subject teachers require a subject; class teachers are assigned to one section.</p>
-      {error && <p className="error">{error}</p>}
+      <p className="muted">A subject teacher only gets that subject — not every subject in the school.</p>
       <form className="card" onSubmit={save}>
-        <h3>{editingId ? "Edit assignment" : "New assignment"}</h3>
-        <select required value={form.assignmentType}
-          onChange={(e) => setForm({ ...form, assignmentType: e.target.value, subjectId: "" })}>
-          <option value="SUBJECT_TEACHER">Subject Teacher</option>
-          <option value="CLASS_TEACHER">Class Teacher</option>
+        <select value={form.staffId} onChange={(e) => setForm({ ...form, staffId: e.target.value })}>
+          <option value="">Staff</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.fullName}</option>)}
         </select>
-        <select required value={form.staffId} onChange={(e) => setForm({ ...form, staffId: e.target.value })}>
-          <option value="">Teacher</option>
-          {staff.filter((item) => item.status === "ACTIVE").map((item) =>
-            <option key={item.id} value={item.id}>{item.fullName}</option>)}
+        <select value={form.subjectId} onChange={(e) => setForm({ ...form, subjectId: e.target.value })}>
+          <option value="">Subject</option>{subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        {form.assignmentType === "SUBJECT_TEACHER" && (
-          <select required value={form.subjectId} onChange={(e) => setForm({ ...form, subjectId: e.target.value })}>
-            <option value="">Subject</option>
-            {subjects.filter((item) => item.status === "ACTIVE").map((item) =>
-              <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-        )}
-        <select required value={form.academicYearId}
-          onChange={(e) => setForm({ ...form, academicYearId: e.target.value, sectionId: "" })}>
-          <option value="">Academic Year</option>
-          {years.filter((item) => item.status === "ACTIVE").map((item) =>
-            <option key={item.id} value={item.id}>{item.name}</option>)}
+        <select value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
+          <option value="">Class</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select required value={form.classId}
-          onChange={(e) => setForm({ ...form, classId: e.target.value, sectionId: "" })}>
-          <option value="">Class</option>
-          {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        <select value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
+          <option value="">Section (optional)</option>{sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <select required={form.assignmentType === "CLASS_TEACHER"} value={form.sectionId}
-          onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
-          <option value="">Section{form.assignmentType === "CLASS_TEACHER" ? "" : " (optional)"}</option>
-          {filteredSections.filter((item) => item.status === "ACTIVE").map((item) =>
-            <option key={item.id} value={item.id}>{item.name}</option>)}
+        <select value={form.academicYearId} onChange={(e) => setForm({ ...form, academicYearId: e.target.value })}>
+          <option value="">Year</option>{years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
         </select>
-        <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-          <option>ACTIVE</option><option>INACTIVE</option>
-        </select>
-        <div className="row">
-          <button>{editingId ? "Save changes" : "Assign teacher"}</button>
-          {editingId && <button type="button" className="secondary"
-            onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}
-        </div>
+        <button>Assign</button>
       </form>
       <table>
-        <thead><tr><th>Teacher</th><th>Subject</th><th>Class</th><th>Section</th><th>Academic Year</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Staff</th><th>Subject</th><th>Class</th><th>Section</th></tr></thead>
         <tbody>
-          {rows.map((row) => <tr key={row.id}>
-            <td>{row.teacherName || `#${row.staffId}`}</td>
-            <td>{row.subjectName || "—"}</td><td>{row.className || `#${row.classId}`}</td>
-            <td>{row.sectionName || "—"}</td><td>{row.academicYearName || `#${row.academicYearId}`}</td>
-            <td>{row.assignmentType === "CLASS_TEACHER" ? "Class Teacher" : "Subject Teacher"}</td>
-            <td>{row.status}</td>
-            <td><button type="button" className="secondary" onClick={() => edit(row)}>Edit</button>{" "}
-              {row.status === "ACTIVE"
-                ? <button type="button" onClick={() => setStatus(row, "INACTIVE")}>Deactivate</button>
-                : <button type="button" onClick={() => setStatus(row, "ACTIVE")}>Activate</button>}{" "}
-              <button type="button" className="secondary" onClick={() => unassign(row)}>Unassign</button></td>
-          </tr>)}
+          {rows.map((r) => (
+            <tr key={r.id}><td>{r.staffId}</td><td>{r.subjectId}</td><td>{r.classId}</td><td>{r.sectionId || "-"}</td></tr>
+          ))}
         </tbody>
       </table>
     </div>

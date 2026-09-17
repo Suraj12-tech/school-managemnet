@@ -11,8 +11,6 @@ import com.schoolenterprise.school.entity.AcademicYear;
 import com.schoolenterprise.school.entity.School;
 import com.schoolenterprise.school.repository.AcademicYearRepository;
 import com.schoolenterprise.school.repository.SchoolRepository;
-import com.schoolenterprise.staff.entity.Staff;
-import com.schoolenterprise.staff.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +46,6 @@ public class DataSeeder implements CommandLineRunner {
     private final AppUserRepository userRepository;
     private final SchoolRepository schoolRepository;
     private final AcademicYearRepository academicYearRepository;
-    private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -66,10 +63,6 @@ public class DataSeeder implements CommandLineRunner {
 
         School school = seedSchool();
         seedYear(school);
-
-        seedDemoUser("accountant", "accountant@school.local", "Accountant User", "Accountant@123", accountant, school.getId(), "SCHOOL");
-        seedDemoUser("teacher", "teacher@school.local", "Class Teacher", "Teacher@123", classTeacher, null, null);
-        seedTeacherStaff();
 
         if (userRepository.findByUsername("admin").isEmpty()) {
             AppUser admin = new AppUser();
@@ -129,45 +122,6 @@ public class DataSeeder implements CommandLineRunner {
         }
         role.setPermissions(set);
         roleRepository.save(role);
-    }
-
-    private void seedDemoUser(String username, String email, String fullName, String password, Role role,
-                              Long scopeId, String scopeType) {
-        if (userRepository.findByUsername(username).isPresent()) {
-            return;
-        }
-        AppUser user = new AppUser();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setPasswordHash(passwordEncoder.encode(password));
-        user.setFullName(fullName);
-        user.setStatus("ACTIVE");
-        user.setRoles(Set.of(role));
-        if (scopeType != null && scopeId != null) {
-            UserScope scope = new UserScope();
-            scope.setUser(user);
-            scope.setScopeType(scopeType);
-            scope.setScopeId(scopeId);
-            user.getScopes().add(scope);
-        }
-        userRepository.save(user);
-        log.info("Created demo user {} / {}", username, password);
-    }
-
-    private void seedTeacherStaff() {
-        AppUser teacher = userRepository.findByUsername("teacher").orElse(null);
-        if (teacher == null || staffRepository.findByUserId(teacher.getId()).isPresent()) {
-            return;
-        }
-        Staff staff = new Staff();
-        staff.setUserId(teacher.getId());
-        staff.setEmployeeId("EMP-T001");
-        staff.setFullName(teacher.getFullName());
-        staff.setDesignation("Class Teacher");
-        staff.setEmail(teacher.getEmail());
-        staff.setStatus("ACTIVE");
-        staffRepository.save(staff);
-        log.info("Linked demo teacher user to staff EMP-T001");
     }
 
     private School seedSchool() {

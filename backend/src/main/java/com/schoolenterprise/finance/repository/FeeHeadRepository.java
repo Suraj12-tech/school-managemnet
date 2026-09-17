@@ -7,8 +7,4 @@ import java.util.List;
 
 public interface FeeHeadRepository extends JpaRepository<FeeHead, Long> {
     List<FeeHead> findBySchoolId(Long schoolId);
-    boolean existsBySchoolIdAndCodeIgnoreCase(Long schoolId, String code);
-    boolean existsBySchoolIdAndNameIgnoreCase(Long schoolId, String name);
-    boolean existsBySchoolIdAndCodeIgnoreCaseAndIdNot(Long schoolId, String code, Long id);
-    boolean existsBySchoolIdAndNameIgnoreCaseAndIdNot(Long schoolId, String name, Long id);
 }

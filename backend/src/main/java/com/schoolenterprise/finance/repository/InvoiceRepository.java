@@ -11,5 +11,4 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByStatus(String status);
     long countByInvoiceNumberStartingWith(String prefix);
     List<Invoice> findByStatusAndDueDateBefore(String status, LocalDate date);
-    boolean existsByAcademicYearId(Long academicYearId);
 }

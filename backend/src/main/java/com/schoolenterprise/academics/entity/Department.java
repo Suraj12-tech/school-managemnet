@@ -15,8 +15,5 @@ public class Department {
     @Column(name = "school_id")
     private Long schoolId;
     private String name;
-    private String description;
-    @Column(nullable = false)
-    private String status = "ACTIVE";
     private String code;
 }

@@ -29,18 +29,9 @@ public class DashboardService {
 
     public Map<String, Object> summary() {
         List<StudentFeeAccount> accounts = accountRepository.findAll();
-        BigDecimal due = accounts.stream()
-                .map(StudentFeeAccount::getTotalDue)
-                .filter(java.util.Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal paid = accounts.stream()
-                .map(StudentFeeAccount::getTotalPaid)
-                .filter(java.util.Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal outstanding = accounts.stream()
-                .map(StudentFeeAccount::getOutstanding)
-                .filter(java.util.Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal due = accounts.stream().map(StudentFeeAccount::getTotalDue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal paid = accounts.stream().map(StudentFeeAccount::getTotalPaid).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal outstanding = accounts.stream().map(StudentFeeAccount::getOutstanding).reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<String> alerts = new ArrayList<>();
         if (academicYearRepository.findAll().stream().noneMatch(y -> y.isCurrentYear())) {

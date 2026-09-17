@@ -32,26 +32,21 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ApiResponse<Void> logout(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String header) {
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
-            Claims claims = jwtService.parse(token);
-            authService.logout(claims.getId());
-        }
+    public ApiResponse<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String header) {
+        String token = header.substring(7);
+        Claims claims = jwtService.parse(token);
+        authService.logout(claims.getId());
         return ApiResponse.ok("Logged out", null);
     }
 
     @PostMapping("/forgot-password")
     public ApiResponse<Map<String, String>> forgot(@Valid @RequestBody ForgotPasswordRequest request) {
-        Map<String, String> result = authService.forgotPassword(request.getEmail());
-        return ApiResponse.ok(result.get("message"), result);
+        String token = authService.forgotPassword(request.getEmail());
+        return ApiResponse.ok("Reset token created (demo returns token)", Map.of("resetToken", token));
     }
 
     @PostMapping("/reset-password")
     public ApiResponse<Void> reset(@Valid @RequestBody ResetPasswordRequest request) {
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            throw com.schoolenterprise.common.exception.AppException.badRequest("Passwords do not match");
-        }
         authService.resetPassword(request.getToken(), request.getNewPassword());
         return ApiResponse.ok("Password updated", null);
     }

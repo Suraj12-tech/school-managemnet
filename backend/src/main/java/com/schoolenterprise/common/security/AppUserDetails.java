@@ -20,24 +20,16 @@ public class AppUserDetails implements UserDetails {
     private final boolean active;
     private final Set<String> roles;
     private final Set<String> permissions;
-    private final Set<String> roleSensitivities;
     private final List<UserScope> scopes;
 
     public AppUserDetails(Long userId, String username, String password, boolean active,
                           Set<String> roles, Set<String> permissions, List<UserScope> scopes) {
-        this(userId, username, password, active, roles, permissions, Set.of(), scopes);
-    }
-
-    public AppUserDetails(Long userId, String username, String password, boolean active,
-                          Set<String> roles, Set<String> permissions, Set<String> roleSensitivities,
-                          List<UserScope> scopes) {
         this.userId = userId;
         this.username = username;
         this.password = password;
         this.active = active;
         this.roles = roles;
         this.permissions = permissions;
-        this.roleSensitivities = roleSensitivities;
         this.scopes = scopes;
     }
 

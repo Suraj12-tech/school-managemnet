@@ -7,5 +7,4 @@ import java.util.List;
 
 public interface ClassHistoryRepository extends JpaRepository<ClassHistory, Long> {
     List<ClassHistory> findByStudentId(Long studentId);
-    boolean existsBySectionId(Long sectionId);
 }

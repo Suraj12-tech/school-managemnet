@@ -25,17 +25,13 @@ public class AppUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        AppUser user = userRepository.findByUsernameOrEmailWithRoles(username.trim())
+        AppUser user = userRepository.findByUsernameWithRoles(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         Set<String> roles = new HashSet<>();
         Set<String> permissions = new HashSet<>();
-        Set<String> sensitivities = new HashSet<>();
         for (Role role : user.getRoles()) {
             roles.add(role.getName());
-            if (role.getSensitivity() != null) {
-                sensitivities.add(role.getSensitivity());
-            }
             for (Permission permission : role.getPermissions()) {
                 permissions.add(permission.getModuleName() + ":" + permission.getActionName());
             }
@@ -48,7 +44,6 @@ public class AppUserDetailsService implements UserDetailsService {
                 "ACTIVE".equals(user.getStatus()),
                 roles,
                 permissions,
-                sensitivities,
                 userScopeRepository.findByUserId(user.getId())
         );
     }

@@ -48,19 +48,6 @@ input, select, button {
   border-radius: 6px;
   border: 1px solid #c5d0d8;
 }
-.password-field { position: relative; width: 100%; }
-.password-field input { width: 100%; padding-right: 42px; }
-.password-toggle {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  color: #5d6d7e;
-  padding: 5px;
-}
-.password-toggle:hover { color: var(--accent); background: transparent; }
-.password-toggle svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 button {
   background: var(--accent);
   color: #fff;

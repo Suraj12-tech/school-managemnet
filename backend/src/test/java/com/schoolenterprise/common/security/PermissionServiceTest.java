@@ -2,7 +2,6 @@ package com.schoolenterprise.common.security;
 
 import com.schoolenterprise.common.exception.AppException;
 import com.schoolenterprise.identity.entity.UserScope;
-import com.schoolenterprise.school.repository.AcademicYearRepository;
 import com.schoolenterprise.staff.repository.StaffRepository;
 import com.schoolenterprise.staff.repository.TeacherAssignmentRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -29,8 +28,6 @@ class PermissionServiceTest {
     private StaffRepository staffRepository;
     @Mock
     private TeacherAssignmentRepository teacherAssignmentRepository;
-    @Mock
-    private AcademicYearRepository academicYearRepository;
     @InjectMocks
     private PermissionService permissionService;
 
@@ -49,19 +46,6 @@ class PermissionServiceTest {
     void adminBypassesModuleCheck() {
         login("admin", Set.of("ADMIN"), Set.of(), List.of());
         assertDoesNotThrow(() -> permissionService.require("fees", "approve"));
-    }
-
-    @Test
-    void feesNeedFinancialRoleEvenIfPermissionIsPresent() {
-        AppUserDetails details = new AppUserDetails(
-                3L, "teacher", "x", true,
-                Set.of("CLASS_TEACHER"),
-                Set.of("fees:view"),
-                Set.of("NORMAL"),
-                List.of());
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities()));
-        assertThrows(AppException.class, () -> permissionService.require("fees", "view"));
     }
 
     @Test

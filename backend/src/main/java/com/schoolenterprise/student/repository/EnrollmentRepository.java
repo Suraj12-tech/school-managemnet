@@ -8,5 +8,4 @@ import java.util.List;
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     List<Enrollment> findByStudentId(Long studentId);
     List<Enrollment> findBySectionId(Long sectionId);
-    boolean existsByStudentIdAndAcademicYearId(Long studentId, Long academicYearId);
 }

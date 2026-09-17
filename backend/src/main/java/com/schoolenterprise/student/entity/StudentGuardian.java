@@ -18,8 +18,4 @@ public class StudentGuardian {
     private Long guardianId;
     @Column(name = "is_primary")
     private boolean primaryGuardian;
-    @Column(name = "relationship_type")
-    private String relationshipType;
-    @Column(name = "is_emergency_contact")
-    private boolean emergencyContact;
 }

@@ -18,7 +18,4 @@ public class Subject {
     private Long departmentId;
     private String name;
     private String code;
-    private String description;
-    @Column(nullable = false)
-    private String status = "ACTIVE";
 }

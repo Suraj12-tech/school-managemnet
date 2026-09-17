@@ -23,5 +23,4 @@ public class AcademicYear {
     private LocalDate endDate;
     @Column(name = "is_current")
     private boolean currentYear;
-    private String status = "ACTIVE";
 }

@@ -9,6 +9,4 @@ import java.util.List;
 public interface StudentGuardianRepository extends JpaRepository<StudentGuardian, StudentGuardianId> {
     List<StudentGuardian> findByStudentId(Long studentId);
     List<StudentGuardian> findByGuardianId(Long guardianId);
-    long countByGuardianId(Long guardianId);
-    boolean existsByStudentIdAndGuardianId(Long studentId, Long guardianId);
 }

@@ -15,8 +15,8 @@ const links = [
   { to: "/assignments", label: "Teacher Assignments", module: "staff" },
   { to: "/fee-heads", label: "Fee Heads", module: "fees" },
   { to: "/fee-structures", label: "Fee Structures", module: "fees" },
-  { to: "/invoices", label: "Invoices & Payments", module: "fees" },
   { to: "/fee-accounts", label: "Student Fee Accounts", module: "fees" },
+  { to: "/invoices", label: "Invoices & Payments", module: "fees" },
   { to: "/reports", label: "Fee Reports", module: "fees" },
   { to: "/audit", label: "Audit Log", module: "audit" }
 ];

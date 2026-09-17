@@ -23,7 +23,6 @@ public class Student {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
     private String gender;
-    private String email;
     private String status = "ACTIVE";
     @Column(name = "current_section_id")
     private Long currentSectionId;

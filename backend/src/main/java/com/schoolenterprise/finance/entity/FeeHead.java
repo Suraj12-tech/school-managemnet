@@ -17,6 +17,4 @@ public class FeeHead {
     private String name;
     private String code;
     private String description;
-    @Column(nullable = false)
-    private String status = "ACTIVE";
 }

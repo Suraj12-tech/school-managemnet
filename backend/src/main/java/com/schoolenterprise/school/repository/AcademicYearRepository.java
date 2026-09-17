@@ -8,5 +8,4 @@ import java.util.List;
 public interface AcademicYearRepository extends JpaRepository<AcademicYear, Long> {
     List<AcademicYear> findBySchoolId(Long schoolId);
     List<AcademicYear> findBySchoolIdAndCurrentYearTrue(Long schoolId);
-    boolean existsBySchoolIdAndNameIgnoreCase(Long schoolId, String name);
 }

@@ -15,6 +15,6 @@ public class SchoolClass {
     @Column(name = "school_id")
     private Long schoolId;
     private String name;
-    @Column(name = "number_of_classrooms", nullable = false)
-    private Integer numberOfClassrooms = 1;
+    @Column(name = "grade_level")
+    private Integer gradeLevel;
 }

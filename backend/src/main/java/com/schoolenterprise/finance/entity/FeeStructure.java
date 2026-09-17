@@ -18,6 +18,4 @@ public class FeeStructure {
     private Long classId;
     private String category = "GENERAL";
     private String name;
-    @Column(nullable = false)
-    private String status = "ACTIVE";
 }

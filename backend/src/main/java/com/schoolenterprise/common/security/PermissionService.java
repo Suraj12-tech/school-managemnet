@@ -2,10 +2,6 @@ package com.schoolenterprise.common.security;
 
 import com.schoolenterprise.common.exception.AppException;
 import com.schoolenterprise.identity.entity.UserScope;
-import com.schoolenterprise.academics.repository.SectionRepository;
-import com.schoolenterprise.school.entity.AcademicYear;
-import com.schoolenterprise.school.repository.AcademicYearRepository;
-import com.schoolenterprise.student.repository.StudentRepository;
 import com.schoolenterprise.staff.repository.StaffRepository;
 import com.schoolenterprise.staff.repository.TeacherAssignmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +21,6 @@ public class PermissionService {
 
     private final StaffRepository staffRepository;
     private final TeacherAssignmentRepository teacherAssignmentRepository;
-    private final AcademicYearRepository academicYearRepository;
-    private final SectionRepository sectionRepository;
-    private final StudentRepository studentRepository;
 
     public AppUserDetails currentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -45,61 +38,6 @@ public class PermissionService {
         String key = module + ":" + action;
         if (!user.getPermissions().contains(key)) {
             throw AppException.forbidden("Missing permission " + key);
-        }
-        if ("fees".equals(module) && !hasFinancialAccess(user)) {
-            throw AppException.forbidden("Fee access is financial and must be granted on a FINANCIAL role");
-        }
-        if ("staff".equals(module) && !isViewAction(action) && !hasHrAccess(user)) {
-            throw AppException.forbidden("Staff write access is HR-restricted");
-        }
-    }
-
-    private boolean isViewAction(String action) {
-        return "view".equals(action) || "export".equals(action);
-    }
-
-    public boolean hasFinancialAccess() {
-        return hasFinancialAccess(currentUser());
-    }
-
-    public boolean hasFinancialAccess(AppUserDetails user) {
-        if (isAdmin(user)) {
-            return true;
-        }
-        Set<String> sensitivities = user.getRoleSensitivities();
-        return sensitivities != null && sensitivities.contains("FINANCIAL");
-    }
-
-    public boolean hasHrAccess(AppUserDetails user) {
-        if (isAdmin(user)) {
-            return true;
-        }
-        Set<String> sensitivities = user.getRoleSensitivities();
-        return sensitivities != null && (sensitivities.contains("HR_RESTRICTED") || sensitivities.contains("FINANCIAL"));
-    }
-
-    public boolean canAccessHistoricalYears() {
-        AppUserDetails user = currentUser();
-        return isAdmin(user)
-                || user.getPermissions().contains("fees:export")
-                || user.getPermissions().contains("school:edit");
-    }
-
-    public Long currentAcademicYearId() {
-        return academicYearRepository.findAll().stream()
-                .filter(AcademicYear::isCurrentYear)
-                .map(AcademicYear::getId)
-                .findFirst()
-                .orElse(null);
-    }
-
-    public void assertYearAccess(Long yearId) {
-        if (yearId == null || canAccessHistoricalYears()) {
-            return;
-        }
-        Long currentId = currentAcademicYearId();
-        if (currentId != null && !currentId.equals(yearId)) {
-            throw AppException.forbidden("Historical academic-year data is outside your time scope");
         }
     }
 
@@ -128,11 +66,6 @@ public class PermissionService {
         for (UserScope scope : user.getScopes()) {
             if ("SECTION".equals(scope.getScopeType())) {
                 ids.add(scope.getScopeId());
-            }
-        }
-        for (UserScope scope : user.getScopes()) {
-            if ("CLASS".equals(scope.getScopeType())) {
-                sectionRepository.findByClassId(scope.getScopeId()).forEach(section -> ids.add(section.getId()));
             }
         }
         staffRepository.findByUserId(user.getUserId()).ifPresent(staff -> {
@@ -182,37 +115,6 @@ public class PermissionService {
             return;
         }
         throw AppException.forbidden("This student is outside your assigned scope");
-    }
-
-    public Set<Long> allowedStudentIds() {
-        AppUserDetails user = currentUser();
-        Set<Long> ids = new HashSet<>();
-        for (UserScope scope : user.getScopes()) {
-            if ("STUDENT".equals(scope.getScopeType()) || "ASSIGNED_STUDENT".equals(scope.getScopeType())) {
-                ids.add(scope.getScopeId());
-            }
-        }
-        return ids;
-    }
-
-    public void assertStudent(Long studentId, Long sectionId) {
-        if (hasSchoolWideAccess()) {
-            return;
-        }
-        if (studentId != null && allowedStudentIds().contains(studentId)) {
-            return;
-        }
-        assertStudentSection(sectionId);
-    }
-
-    public boolean canAssignScope(String scopeType, Long scopeId) {
-        AppUserDetails user = currentUser();
-        if (isAdmin(user)) {
-            return true;
-        }
-        return user.getScopes().stream()
-                .anyMatch(scope -> "SCHOOL".equals(scope.getScopeType())
-                        || (scope.getScopeType().equals(scopeType) && scope.getScopeId().equals(scopeId)));
     }
 
     public void assertClass(Long classId) {

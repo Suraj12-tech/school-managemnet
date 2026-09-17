@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext.jsx";
 import Layout from "./layout/Layout.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import SchoolPage from "./pages/SchoolPage.jsx";
 import YearsPage from "./pages/YearsPage.jsx";
@@ -32,7 +31,6 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/" element={<Private><Layout /></Private>}>
         <Route index element={<DashboardPage />} />
         <Route path="school" element={<SchoolPage />} />

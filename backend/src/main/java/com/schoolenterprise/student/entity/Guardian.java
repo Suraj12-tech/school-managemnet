@@ -19,8 +19,4 @@ public class Guardian {
     private String phone;
     private String email;
     private String address;
-    private String occupation;
-    @Column(name = "emergency_contact")
-    private boolean emergencyContact;
-    private String status = "ACTIVE";
 }

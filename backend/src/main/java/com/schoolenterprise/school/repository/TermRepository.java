@@ -7,5 +7,4 @@ import java.util.List;
 
 public interface TermRepository extends JpaRepository<Term, Long> {
     List<Term> findByAcademicYearId(Long academicYearId);
-    boolean existsByAcademicYearIdAndNameIgnoreCase(Long academicYearId, String name);
 }

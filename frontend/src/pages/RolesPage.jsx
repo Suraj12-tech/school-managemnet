@@ -5,18 +5,12 @@ export default function RolesPage() {
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [error, setError] = useState("");
 
   async function load() {
-    try {
-      setError("");
-      const r = await api("/api/roles");
-      setRoles(Array.isArray(r) ? r : []);
-      setPermissions(await api("/api/permissions"));
-      if (!selected && r[0]) setSelected(r[0]);
-    } catch (err) {
-      setError(err.message);
-    }
+    const r = await api("/api/roles");
+    setRoles(r);
+    setPermissions(await api("/api/permissions"));
+    if (!selected && r[0]) setSelected(r[0]);
   }
   useEffect(() => { load(); }, []);
 
@@ -43,7 +37,6 @@ export default function RolesPage() {
   return (
     <div>
       <h2>Role & Permission Management</h2>
-      {error && <p className="error">{error}</p>}
       <p className="muted">Permissions are enforced on the backend, not only by hiding menu items.</p>
       <div className="split">
         <ul className="list">

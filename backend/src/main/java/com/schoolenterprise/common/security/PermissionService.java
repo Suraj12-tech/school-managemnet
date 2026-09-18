@@ -46,7 +46,7 @@ public class PermissionService {
         if (!user.getPermissions().contains(key)) {
             throw AppException.forbidden("Missing permission " + key);
         }
-        if ("fees".equals(module) && !hasFinancialAccess(user)) {
+        if (("fees".equals(module) || "finance".equals(module)) && !hasFinancialAccess(user)) {
             throw AppException.forbidden("Fee access is financial and must be granted on a FINANCIAL role");
         }
         if ("staff".equals(module) && !isViewAction(action) && !hasHrAccess(user)) {

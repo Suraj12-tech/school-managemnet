@@ -10,6 +10,7 @@ export default function FeeHeadsPage() {
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
 
   async function load() { setRows(await api("/api/fee-heads")); }
   useEffect(() => { load(); }, []);
@@ -37,6 +38,7 @@ export default function FeeHeadsPage() {
     try { await api(`/api/fee-heads/${row.id}`, "DELETE"); await load(); }
     catch (err) { setError(err.message || "Unable to delete fee head"); }
   }
+  const visibleRows = rows.filter((row) => `${row.name} ${row.code} ${row.description || ""}`.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div>
@@ -49,17 +51,18 @@ export default function FeeHeadsPage() {
         <button>{editing ? "Update fee head" : "Add fee head"}</button>
         {editing && <button type="button" onClick={() => { setEditing(null); setForm(empty); }}>Cancel</button>}
       </form>
+      <div className="card filter-bar"><input placeholder="Search fee heads" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
       {error && <div className="error">{error}</div>}
       <TableWrap>
       <table>
         <thead><tr><th>Name</th><th>Code</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>{rows.map((r) => <tr key={r.id}>
+        <tbody>{visibleRows.map((r) => <tr key={r.id}>
           <td>{r.name}</td><td>{r.code}</td><td>{r.description || "-"}</td><td><StatusBadge value={r.status} /></td>
           <td><button type="button" onClick={() => window.alert(`${r.name}\n${r.description || "No description"}`)}>View</button>{" "}
             <button type="button" onClick={() => { setEditing(r); setForm({ name: r.name, code: r.code, description: r.description || "", status: r.status || "ACTIVE" }); }}>Edit</button>{" "}
             <button type="button" onClick={() => changeStatus(r)}>{r.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>{" "}
             <button type="button" onClick={() => remove(r)}>Delete</button></td>
-        </tr>)}</tbody>
+        </tr>)}{!visibleRows.length && <tr><td colSpan="5" className="muted">No fee heads found.</td></tr>}</tbody>
       </table>
       </TableWrap>
     </div>

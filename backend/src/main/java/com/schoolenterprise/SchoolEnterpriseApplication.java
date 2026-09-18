@@ -10,5 +10,6 @@ public class SchoolEnterpriseApplication {
         SpringApplication.run(SchoolEnterpriseApplication.class, args);
         //safe
         //safe-2
+        //safe-4
     }
 }

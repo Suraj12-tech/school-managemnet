@@ -4,6 +4,8 @@ import com.schoolenterprise.auth.dto.ForgotPasswordRequest;
 import com.schoolenterprise.auth.dto.LoginRequest;
 import com.schoolenterprise.auth.dto.LoginResponse;
 import com.schoolenterprise.auth.dto.ResetPasswordRequest;
+import com.schoolenterprise.auth.dto.ChangePasswordRequest;
+import com.schoolenterprise.auth.dto.ProfileUpdateRequest;
 import com.schoolenterprise.auth.service.AuthService;
 import com.schoolenterprise.common.api.ApiResponse;
 import com.schoolenterprise.common.security.AppUserDetails;
@@ -58,11 +60,21 @@ public class AuthController {
 
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> me(@AuthenticationPrincipal AppUserDetails user) {
-        return ApiResponse.ok(Map.of(
-                "userId", user.getUserId(),
-                "username", user.getUsername(),
-                "roles", user.getRoles(),
-                "permissions", user.getPermissions()
-        ));
+        return ApiResponse.ok(authService.currentProfile(user));
+    }
+
+    @PutMapping("/me")
+    public ApiResponse<Map<String, Object>> updateProfile(
+            @AuthenticationPrincipal AppUserDetails user,
+            @Valid @RequestBody ProfileUpdateRequest request) {
+        return ApiResponse.ok("Profile updated", authService.updateProfile(user, request));
+    }
+
+    @PostMapping("/change-password")
+    public ApiResponse<Void> changePassword(
+            @AuthenticationPrincipal AppUserDetails user,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(user, request);
+        return ApiResponse.ok("Password changed successfully", null);
     }
 }

@@ -12,6 +12,9 @@ public class LoginResponse {
     private Long userId;
     private String username;
     private String fullName;
+    private String email;
+    private String phone;
+    private String status;
     private Set<String> roles;
     private Set<String> permissions;
 }

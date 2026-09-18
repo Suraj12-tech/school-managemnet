@@ -48,6 +48,13 @@ export function AuthProvider({ children }) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       setUser(null);
+    },
+    updateUser: (next) => {
+      setUser((current) => {
+        const updated = { ...current, ...next };
+        localStorage.setItem("user", JSON.stringify(updated));
+        return updated;
+      });
     }
   }), [user]);
 

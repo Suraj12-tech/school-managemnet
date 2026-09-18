@@ -21,6 +21,8 @@ export default function SubjectsPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   async function load() {
     setLoading(true);
@@ -211,12 +213,21 @@ export default function SubjectsPage() {
   }
 
   if (loading) return <p>Loading subjects and departments...</p>;
+  const visibleDepartments = departments.filter((item) =>
+    `${item.name} ${item.code}`.toLowerCase().includes(query.toLowerCase())
+    && (statusFilter === "ALL" || item.status === statusFilter)
+  );
+  const visibleSubjects = subjects.filter((item) =>
+    `${item.name} ${item.code} ${item.departmentName}`.toLowerCase().includes(query.toLowerCase())
+    && (statusFilter === "ALL" || item.status === statusFilter)
+  );
 
   return (
     <div>
       <PageHeader title="Departments & subjects" description="Organize the academic catalog and map subjects to classes." />
       {message && <p className="ok">{message}</p>}
       {error && <p className="error">{error}</p>}
+      <div className="card filter-bar"><input placeholder="Search departments and subjects" value={query} onChange={(e) => setQuery(e.target.value)} /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>ACTIVE</option><option>INACTIVE</option></select></div>
 
       <form className="card form-card" onSubmit={saveDepartment}>
         <h3>{editingDepartmentId ? "Edit department" : "New department"}</h3>
@@ -240,7 +251,7 @@ export default function SubjectsPage() {
       <table>
         <thead><tr><th>Department</th><th>Subjects</th><th>Staff</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
-          {departments.map((item) => (
+          {visibleDepartments.map((item) => (
             <tr key={item.id}>
               <td>{item.name}</td>
               <td>{item.subjectCount}</td>
@@ -256,7 +267,7 @@ export default function SubjectsPage() {
               </td>
             </tr>
           ))}
-          {!departments.length && <tr><td colSpan="5">No departments created yet.</td></tr>}
+          {!visibleDepartments.length && <tr><td colSpan="5" className="muted">No departments found.</td></tr>}
         </tbody>
       </table>
 
@@ -289,7 +300,7 @@ export default function SubjectsPage() {
       <table>
         <thead><tr><th>Subject</th><th>Code</th><th>Department</th><th>Classes</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
-          {subjects.map((item) => (
+          {visibleSubjects.map((item) => (
             <tr key={item.id}>
               <td>{item.name}</td>
               <td>{item.code}</td>
@@ -306,7 +317,7 @@ export default function SubjectsPage() {
               </td>
             </tr>
           ))}
-          {!subjects.length && <tr><td colSpan="6">No subjects created yet.</td></tr>}
+          {!visibleSubjects.length && <tr><td colSpan="6" className="muted">No subjects found.</td></tr>}
         </tbody>
       </table>
 

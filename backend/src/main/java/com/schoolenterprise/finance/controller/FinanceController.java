@@ -13,6 +13,9 @@ import com.schoolenterprise.finance.dto.FeeAccountResponse;
 import com.schoolenterprise.finance.dto.InvoiceResponse;
 import com.schoolenterprise.finance.dto.ReceiptResponse;
 import com.schoolenterprise.finance.dto.FinanceReportResponse;
+import com.schoolenterprise.finance.dto.PayrollRequest;
+import com.schoolenterprise.finance.dto.PayrollResponse;
+import com.schoolenterprise.finance.dto.ExpenseRequest;
 import com.schoolenterprise.finance.service.FinanceService;
 import com.schoolenterprise.school.dto.StatusRequest;
 import jakarta.validation.Valid;
@@ -199,6 +202,67 @@ public class FinanceController {
     @RequirePermission(module = "fees", action = "export")
     public ApiResponse<List<ReceiptResponse>> collections() {
         return ApiResponse.ok(financeService.receipts());
+    }
+
+    @GetMapping("/payroll")
+    @RequirePermission(module = "finance", action = "view")
+    public ApiResponse<List<PayrollResponse>> payroll(@RequestParam(required = false) Long staffId,
+                                                       @RequestParam(required = false) String payPeriod,
+                                                       @RequestParam(required = false) String status) {
+        return ApiResponse.ok(financeService.payroll(staffId, payPeriod, status));
+    }
+
+    @PostMapping("/payroll")
+    @RequirePermission(module = "finance", action = "create")
+    public ApiResponse<PayrollResponse> createPayroll(@Valid @RequestBody PayrollRequest request) {
+        return ApiResponse.ok(financeService.createPayroll(request));
+    }
+
+    @PutMapping("/payroll/{id}")
+    @RequirePermission(module = "finance", action = "edit")
+    public ApiResponse<PayrollResponse> updatePayroll(@PathVariable Long id, @Valid @RequestBody PayrollRequest request) {
+        return ApiResponse.ok(financeService.updatePayroll(id, request));
+    }
+
+    @DeleteMapping("/payroll/{id}")
+    @RequirePermission(module = "finance", action = "delete")
+    public ApiResponse<Void> deletePayroll(@PathVariable Long id) {
+        financeService.deletePayroll(id);
+        return ApiResponse.ok(null);
+    }
+
+    @GetMapping("/expenses")
+    @RequirePermission(module = "finance", action = "view")
+    public ApiResponse<List<Expense>> expenses() {
+        return ApiResponse.ok(financeService.expenses());
+    }
+
+    @PostMapping("/expenses")
+    @RequirePermission(module = "finance", action = "create")
+    public ApiResponse<Expense> createExpense(@Valid @RequestBody ExpenseRequest request) {
+        return ApiResponse.ok(financeService.createExpense(request));
+    }
+
+    @PutMapping("/expenses/{id}")
+    @RequirePermission(module = "finance", action = "edit")
+    public ApiResponse<Expense> updateExpense(@PathVariable Long id, @Valid @RequestBody ExpenseRequest request) {
+        return ApiResponse.ok(financeService.updateExpense(id, request));
+    }
+
+    @DeleteMapping("/expenses/{id}")
+    @RequirePermission(module = "finance", action = "delete")
+    public ApiResponse<Void> deleteExpense(@PathVariable Long id) {
+        financeService.deleteExpense(id);
+        return ApiResponse.ok(null);
+    }
+
+    @GetMapping("/reports/financial")
+    @RequirePermission(module = "finance", action = "export")
+    public ApiResponse<FinanceReportResponse> financialReport(@RequestParam(required = false) Long academicYearId,
+                                                               @RequestParam(required = false) LocalDate from,
+                                                               @RequestParam(required = false) LocalDate to,
+                                                               @RequestParam(required = false) String category) {
+        return ApiResponse.ok(financeService.financialReport(academicYearId, from, to, category));
     }
 
     @Data

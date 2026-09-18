@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
+import { exportCsv } from "../utils/exportCsv.js";
 
 export default function ReportsPage() {
   const [report, setReport] = useState({ dues: [], collections: [], summary: {} });
@@ -75,6 +76,7 @@ export default function ReportsPage() {
 
       <h3>Collection Summary</h3>
       <div className="card">
+        <button type="button" className="secondary" onClick={() => exportCsv("fee-collection-report.csv", report.collections || [])}>Export collection report</button>{" "}
         <strong>Total Due: {Number(summary.totalDue || 0).toFixed(2)}</strong>{" | "}
         <strong>Total Collected: {Number(summary.totalCollected || 0).toFixed(2)}</strong>{" | "}
         <strong>Total Concession: {Number(summary.totalConcession || 0).toFixed(2)}</strong>{" | "}

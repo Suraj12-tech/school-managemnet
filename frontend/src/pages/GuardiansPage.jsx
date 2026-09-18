@@ -14,6 +14,7 @@ export default function GuardiansPage() {
   const [form, setForm] = useState(emptyForm);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
 
   async function load() {
     try { setError(""); setRows(await api("/api/guardians")); }
@@ -55,11 +56,15 @@ export default function GuardiansPage() {
       if (selected?.id === row.id) inspect(row.id);
     } catch (err) { setError(err.message); }
   }
+  const visibleRows = rows.filter((row) =>
+    `${row.fullName} ${row.email} ${row.phone}`.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <div>
       <PageHeader title="Guardians" description="Manage guardian contact details and linked students." />
       {error && <p className="error">{error}</p>}
+      <div className="card filter-bar"><input placeholder="Search guardians" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
       <form className="card form-card" onSubmit={save}>
         <input required placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
         <select value={form.relationType} onChange={(e) => setForm({ ...form, relationType: e.target.value })}>
@@ -79,11 +84,11 @@ export default function GuardiansPage() {
       <TableWrap>
       <table>
         <thead><tr><th>Name</th><th>Relation</th><th>Phone</th><th>Email</th><th>Students</th><th>Status</th><th /></tr></thead>
-        <tbody>{rows.map((g) => <tr key={g.id}>
+        <tbody>{visibleRows.map((g) => <tr key={g.id}>
           <td><button className="linkish" onClick={() => inspect(g.id)}>{g.fullName}</button></td>
           <td>{g.relationType}</td><td>{g.phone}</td><td>{g.email}</td><td>{g.linkedStudentCount}</td><td><StatusBadge value={g.status} /></td>
           <td><button className="secondary" onClick={() => edit(g)}>Edit</button> <button onClick={() => toggleStatus(g)}>{g.status === "ACTIVE" ? "Deactivate" : "Activate"}</button></td>
-        </tr>)}</tbody>
+        </tr>)}{!visibleRows.length && <tr><td colSpan="7" className="muted">No guardians found.</td></tr>}</tbody>
       </table>
       </TableWrap>
       {selected?.students && <div className="card">

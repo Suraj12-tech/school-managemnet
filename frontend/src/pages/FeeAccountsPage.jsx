@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
+import { exportCsv } from "../utils/exportCsv.js";
 
 export default function FeeAccountsPage() {
   const [rows, setRows] = useState([]);
@@ -11,6 +12,8 @@ export default function FeeAccountsPage() {
   const [selected, setSelected] = useState(null);
   const [concession, setConcession] = useState({ studentId: "", amount: "", reason: "" });
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   async function load(id = yearId) {
     const query = id ? `?academicYearId=${id}` : "";
@@ -36,6 +39,10 @@ export default function FeeAccountsPage() {
       await load();
     } catch (err) { setError(err.message || "Unable to apply concession"); }
   }
+  const visibleRows = rows.filter((row) =>
+    `${row.student} ${row.academicYear} ${row.className} ${row.section}`.toLowerCase().includes(query.toLowerCase())
+    && (statusFilter === "ALL" || row.status === statusFilter)
+  );
 
   return (
     <div>
@@ -45,14 +52,15 @@ export default function FeeAccountsPage() {
         {years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
       </select>
       {error && <div className="error">{error}</div>}
+      <div className="card filter-bar"><input placeholder="Search student fee accounts" value={query} onChange={(e) => setQuery(e.target.value)} /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>DUE</option><option>PARTIAL</option><option>PAID</option></select><button type="button" className="secondary" onClick={() => exportCsv("fee-accounts.csv", visibleRows.map((row) => ({ student: row.student, academicYear: row.academicYear, totalDue: row.totalDue, paid: row.totalPaid, outstanding: row.outstanding, status: row.status })))}>Export</button></div>
       <table>
         <thead><tr><th>Student</th><th>Academic Year</th><th>Total Due</th><th>Paid</th><th>Concession</th><th>Outstanding</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.id}>
+        <tbody>{visibleRows.map((row) => <tr key={row.id}>
           <td>{row.student || row.studentId}</td><td>{row.academicYear || row.academicYearId}</td>
           <td>{Number(row.totalDue).toFixed(2)}</td><td>{Number(row.totalPaid).toFixed(2)}</td>
           <td>{Number(row.concessionAmount).toFixed(2)}</td><td><strong>{Number(row.outstanding).toFixed(2)}</strong></td>
           <td><StatusBadge value={row.status} /></td><td><button type="button" onClick={() => setSelected(row)}>View</button></td>
-        </tr>)}</tbody>
+        </tr>)}{!visibleRows.length && <tr><td colSpan="8" className="muted">No fee accounts found.</td></tr>}</tbody>
       </table>
       <form className="card form-card" onSubmit={apply}>
         <h3>Apply concession</h3>

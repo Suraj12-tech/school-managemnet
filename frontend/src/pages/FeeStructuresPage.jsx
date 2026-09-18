@@ -15,6 +15,8 @@ export default function FeeStructuresPage() {
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   async function load() {
     const [structureRows, yearRows, classRows, headRows] = await Promise.all([
@@ -83,6 +85,10 @@ export default function FeeStructuresPage() {
     try { await api(`/api/fee-structures/${row.id}`, "DELETE"); await load(); }
     catch (err) { setError(err.message || "Unable to delete fee structure"); }
   }
+  const visibleRows = structures.filter((row) =>
+    `${row.name} ${row.category} ${row.academicYear} ${row.className}`.toLowerCase().includes(query.toLowerCase())
+    && (statusFilter === "ALL" || row.status === statusFilter)
+  );
 
   return (
     <div>
@@ -121,18 +127,19 @@ export default function FeeStructuresPage() {
         <button>{editing ? "Update structure" : "Create structure"}</button>
         {editing && <button type="button" onClick={() => { setEditing(null); setForm(emptyForm); }}>Cancel</button>}
       </form>
+      <div className="card filter-bar"><input placeholder="Search fee structures" value={query} onChange={(e) => setQuery(e.target.value)} /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>ACTIVE</option><option>INACTIVE</option></select></div>
       {error && <div className="error">{error}</div>}
       <TableWrap>
       <table>
         <thead><tr><th>Name</th><th>Category</th><th>Academic Year</th><th>Class</th><th>Total Amount</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>{structures.map((row) => <tr key={row.id}>
+        <tbody>{visibleRows.map((row) => <tr key={row.id}>
           <td>{row.name}</td><td>{row.category}</td><td>{row.academicYear || row.academicYearId}</td>
           <td>{row.className || row.classId}</td><td>{Number(row.totalAmount || 0).toFixed(2)}</td><td><StatusBadge value={row.status} /></td>
           <td><button type="button" onClick={() => open(row)}>View</button>{" "}
             <button type="button" onClick={() => edit(row)}>Edit</button>{" "}
             <button type="button" onClick={() => changeStatus(row)}>{row.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>{" "}
             <button type="button" onClick={() => remove(row)}>Delete</button></td>
-        </tr>)}</tbody>
+        </tr>)}{!visibleRows.length && <tr><td colSpan="7" className="muted">No fee structures found.</td></tr>}</tbody>
       </table>
       </TableWrap>
       {viewing && <div className="card">

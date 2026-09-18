@@ -12,8 +12,12 @@ import com.schoolenterprise.finance.dto.FeeAccountResponse;
 import com.schoolenterprise.finance.dto.InvoiceResponse;
 import com.schoolenterprise.finance.dto.ReceiptResponse;
 import com.schoolenterprise.finance.dto.FinanceReportResponse;
+import com.schoolenterprise.finance.dto.PayrollRequest;
+import com.schoolenterprise.finance.dto.PayrollResponse;
+import com.schoolenterprise.finance.dto.ExpenseRequest;
 import com.schoolenterprise.finance.repository.*;
 import com.schoolenterprise.finance.util.FeeCalculator;
+import com.schoolenterprise.finance.util.PayrollCalculator;
 import com.schoolenterprise.common.security.PermissionService;
 import com.schoolenterprise.academics.repository.SchoolClassRepository;
 import com.schoolenterprise.academics.repository.SectionRepository;
@@ -21,6 +25,7 @@ import com.schoolenterprise.school.repository.AcademicYearRepository;
 import com.schoolenterprise.school.service.SchoolService;
 import com.schoolenterprise.student.repository.EnrollmentRepository;
 import com.schoolenterprise.student.repository.StudentRepository;
+import com.schoolenterprise.staff.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +57,9 @@ public class FinanceService {
     private final SchoolService schoolService;
     private final AuditService auditService;
     private final PermissionService permissionService;
+    private final PayrollRecordRepository payrollRepository;
+    private final ExpenseRepository expenseRepository;
+    private final StaffRepository staffRepository;
 
     public List<FeeHead> feeHeads() {
         return feeHeadRepository.findBySchoolId(schoolService.getSchool().getId());
@@ -432,8 +440,18 @@ public class FinanceService {
         response.setOutstanding((invoice.getTotalAmount() == null ? BigDecimal.ZERO : invoice.getTotalAmount())
                 .subtract(paid).max(BigDecimal.ZERO));
         response.setStatus(FeeCalculator.invoiceStatus(invoice.getTotalAmount(), paid));
-        studentRepository.findById(invoice.getStudentId()).ifPresent(student ->
-                response.setStudent((student.getFirstName() + " " + student.getLastName()).trim()));
+        studentRepository.findById(invoice.getStudentId()).ifPresent(student -> {
+            response.setStudent((student.getFirstName() + " " + student.getLastName()).trim());
+            if (student.getCurrentSectionId() != null) {
+                sectionRepository.findById(student.getCurrentSectionId()).ifPresent(section -> {
+                    response.setSectionName(section.getName());
+                    if (section.getClassId() != null) {
+                        schoolClassRepository.findById(section.getClassId())
+                                .ifPresent(schoolClass -> response.setClassName(schoolClass.getName()));
+                    }
+                });
+            }
+        });
         if (invoice.getFeeStructureId() != null) {
             feeStructureRepository.findById(invoice.getFeeStructureId())
                     .ifPresent(structure -> response.setFeeStructure(structure.getName()));
@@ -603,6 +621,179 @@ public class FinanceService {
         return accountRepository.findAll().stream()
                 .filter(a -> a.getOutstanding().compareTo(BigDecimal.ZERO) > 0)
                 .toList();
+    }
+
+    public List<PayrollResponse> payroll(Long staffId, String payPeriod, String status) {
+        return payrollRepository.findAll().stream()
+                .filter(row -> staffId == null || staffId.equals(row.getStaffId()))
+                .filter(row -> payPeriod == null || payPeriod.isBlank() || payPeriod.equals(row.getPayPeriod()))
+                .filter(row -> status == null || status.isBlank() || status.equalsIgnoreCase(row.getStatus()))
+                .map(this::payrollResponse)
+                .toList();
+    }
+
+    @Transactional
+    public PayrollResponse createPayroll(PayrollRequest request) {
+        validatePayrollRequest(request, null);
+        PayrollRecord payroll = new PayrollRecord();
+        applyPayroll(payroll, request);
+        PayrollRecord saved = payrollRepository.save(payroll);
+        auditService.record("finance", "create", "PayrollRecord", saved.getId(),
+                saved.getStaffId() + " / " + saved.getPayPeriod());
+        return payrollResponse(saved);
+    }
+
+    @Transactional
+    public PayrollResponse updatePayroll(Long id, PayrollRequest request) {
+        PayrollRecord payroll = payrollRepository.findById(id)
+                .orElseThrow(() -> AppException.notFound("Payroll record not found"));
+        validateStaff(request.getStaffId());
+        validatePayrollRequest(request, id);
+        applyPayroll(payroll, request);
+        PayrollRecord saved = payrollRepository.save(payroll);
+        auditService.record("finance", "edit", "PayrollRecord", saved.getId(),
+                saved.getStaffId() + " / " + saved.getPayPeriod());
+        return payrollResponse(saved);
+    }
+
+    @Transactional
+    public void deletePayroll(Long id) {
+        PayrollRecord payroll = payrollRepository.findById(id)
+                .orElseThrow(() -> AppException.notFound("Payroll record not found"));
+        payrollRepository.delete(payroll);
+        auditService.record("finance", "delete", "PayrollRecord", id, payroll.getPayPeriod());
+    }
+
+    public List<Expense> expenses() {
+        return expenseRepository.findBySchoolId(schoolService.getSchool().getId());
+    }
+
+    @Transactional
+    public Expense createExpense(ExpenseRequest request) {
+        Expense expense = new Expense();
+        applyExpense(expense, request);
+        expense.setSchoolId(schoolService.getSchool().getId());
+        Expense saved = expenseRepository.save(expense);
+        auditService.record("finance", "create", "Expense", saved.getId(), saved.getTitle());
+        return saved;
+    }
+
+    @Transactional
+    public Expense updateExpense(Long id, ExpenseRequest request) {
+        Expense expense = expenseRepository.findById(id)
+                .filter(row -> schoolService.getSchool().getId().equals(row.getSchoolId()))
+                .orElseThrow(() -> AppException.notFound("Expense not found"));
+        applyExpense(expense, request);
+        Expense saved = expenseRepository.save(expense);
+        auditService.record("finance", "edit", "Expense", saved.getId(), saved.getTitle());
+        return saved;
+    }
+
+    @Transactional
+    public void deleteExpense(Long id) {
+        Expense expense = expenseRepository.findById(id)
+                .filter(row -> schoolService.getSchool().getId().equals(row.getSchoolId()))
+                .orElseThrow(() -> AppException.notFound("Expense not found"));
+        expenseRepository.delete(expense);
+        auditService.record("finance", "delete", "Expense", id, expense.getTitle());
+    }
+
+    public FinanceReportResponse financialReport(Long yearId, LocalDate from, LocalDate to, String category) {
+        if (yearId != null) {
+            permissionService.assertYearAccess(yearId);
+        }
+        LocalDate effectiveFrom = from;
+        LocalDate effectiveTo = to;
+        if (yearId != null) {
+            var year = academicYearRepository.findById(yearId)
+                    .orElseThrow(() -> AppException.notFound("Academic year not found"));
+            if (effectiveFrom == null) effectiveFrom = year.getStartDate();
+            if (effectiveTo == null) effectiveTo = year.getEndDate();
+        }
+        final LocalDate reportFrom = effectiveFrom;
+        final LocalDate reportTo = effectiveTo;
+        FinanceReportResponse response = reports(yearId, null, null, null, reportFrom, reportTo);
+        FinanceReportResponse.Summary summary = response.getSummary();
+        BigDecimal payroll = payrollRepository.findAll().stream()
+                .filter(row -> payPeriodInRange(row.getPayPeriod(), reportFrom, reportTo))
+                .map(row -> n(row.getNetSalary()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal expenses = expenses().stream()
+                .filter(row -> category == null || category.isBlank() || category.equalsIgnoreCase(row.getCategory()))
+                .filter(row -> dateInRange(row.getExpenseDate(), reportFrom, reportTo))
+                .map(row -> n(row.getAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        summary.setTotalPayroll(payroll);
+        summary.setTotalExpenses(expenses);
+        summary.setTotalPayments(summary.getTotalCollected());
+        return response;
+    }
+
+    private void validatePayrollRequest(PayrollRequest request, Long id) {
+        validateStaff(request.getStaffId());
+        boolean duplicate = id == null
+                ? payrollRepository.existsByStaffIdAndPayPeriod(request.getStaffId(), request.getPayPeriod())
+                : payrollRepository.existsByStaffIdAndPayPeriodAndIdNot(request.getStaffId(), request.getPayPeriod(), id);
+        if (duplicate) {
+            throw AppException.badRequest("A payroll record already exists for this employee and pay period");
+        }
+    }
+
+    private void validateStaff(Long staffId) {
+        staffRepository.findById(staffId)
+                .filter(staff -> "ACTIVE".equalsIgnoreCase(staff.getStatus()))
+                .orElseThrow(() -> AppException.badRequest("Active staff member not found"));
+    }
+
+    private void applyPayroll(PayrollRecord payroll, PayrollRequest request) {
+        payroll.setStaffId(request.getStaffId());
+        payroll.setPayPeriod(request.getPayPeriod());
+        payroll.setBasicSalary(n(request.getBasicSalary()));
+        payroll.setAllowances(n(request.getAllowances()));
+        payroll.setDeductions(n(request.getDeductions()));
+        payroll.setNetSalary(PayrollCalculator.net(payroll.getBasicSalary(), payroll.getAllowances(), payroll.getDeductions()));
+        payroll.setStatus(request.getStatus() == null ? "PENDING" : request.getStatus().trim().toUpperCase());
+        payroll.setPaymentDate(request.getPaymentDate());
+        payroll.setPaymentMethod(request.getPaymentMethod());
+        payroll.setReferenceNo(request.getReferenceNo());
+    }
+
+    private PayrollResponse payrollResponse(PayrollRecord payroll) {
+        PayrollResponse response = new PayrollResponse();
+        response.setId(payroll.getId());
+        response.setStaffId(payroll.getStaffId());
+        response.setPayPeriod(payroll.getPayPeriod());
+        response.setBasicSalary(payroll.getBasicSalary());
+        response.setAllowances(payroll.getAllowances());
+        response.setDeductions(payroll.getDeductions());
+        response.setNetSalary(payroll.getNetSalary());
+        response.setStatus(payroll.getStatus());
+        response.setPaymentDate(payroll.getPaymentDate());
+        response.setPaymentMethod(payroll.getPaymentMethod());
+        response.setReferenceNo(payroll.getReferenceNo());
+        staffRepository.findById(payroll.getStaffId()).ifPresent(staff -> {
+            response.setEmployeeId(staff.getEmployeeId());
+            response.setStaffName(staff.getFullName());
+            response.setDesignation(staff.getDesignation());
+        });
+        return response;
+    }
+
+    private void applyExpense(Expense expense, ExpenseRequest request) {
+        expense.setTitle(request.getTitle().trim());
+        expense.setCategory(request.getCategory().trim());
+        expense.setAmount(request.getAmount());
+        expense.setExpenseDate(request.getExpenseDate());
+        expense.setDescription(request.getDescription() == null ? null : request.getDescription().trim());
+        expense.setStatus(request.getStatus() == null ? "PENDING" : request.getStatus().trim().toUpperCase());
+        expense.setPaymentMethod(request.getPaymentMethod());
+        expense.setReferenceNo(request.getReferenceNo());
+    }
+
+    private boolean payPeriodInRange(String period, LocalDate from, LocalDate to) {
+        if (period == null || period.length() != 7) return false;
+        LocalDate date = LocalDate.parse(period + "-01");
+        return dateInRange(date, from, to);
     }
 
     public FinanceReportResponse reports(Long yearId, Long classId, Long sectionId, String status,

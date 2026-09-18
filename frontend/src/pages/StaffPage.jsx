@@ -3,6 +3,7 @@ import { api } from "../api/client.js";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TableWrap from "../components/TableWrap.jsx";
+import { exportCsv } from "../utils/exportCsv.js";
 
 const emptyForm = {
   employeeId: "", fullName: "", designation: "", departmentId: "", email: "", phone: "", status: "ACTIVE"
@@ -15,6 +16,8 @@ export default function StaffPage() {
   const [editingId, setEditingId] = useState(null);
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   async function load() {
     try {
@@ -79,11 +82,20 @@ export default function StaffPage() {
       if (profile?.id === staff.id) await view(staff);
     } catch (err) { setError(err.message); }
   }
+  const visibleRows = rows.filter((staff) =>
+    `${staff.employeeId} ${staff.fullName} ${staff.designation} ${staff.email}`.toLowerCase().includes(query.toLowerCase())
+    && (statusFilter === "ALL" || staff.status === statusFilter)
+  );
 
   return (
     <div>
       <PageHeader title="Staff" description="Maintain staff records and review teaching assignments." />
       {error && <p className="error">{error}</p>}
+      <div className="card filter-bar">
+        <input placeholder="Search staff" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>ACTIVE</option><option>INACTIVE</option></select>
+        <button type="button" className="secondary" onClick={() => exportCsv("staff.csv", visibleRows.map((staff) => ({ employeeId: staff.employeeId, name: staff.fullName, designation: staff.designation, status: staff.status })))}>Export</button>
+      </div>
       <form className="card form-card" onSubmit={save}>
         <h3>{editingId ? "Edit staff" : "Create staff"}</h3>
         <input required placeholder="Employee ID" value={form.employeeId}
@@ -115,7 +127,7 @@ export default function StaffPage() {
       <table>
         <thead><tr><th>Employee ID</th><th>Name</th><th>Designation</th><th>Department</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
-          {rows.map((staff) => <tr key={staff.id}>
+          {visibleRows.map((staff) => <tr key={staff.id}>
             <td>{staff.employeeId}</td><td>{staff.fullName}</td><td>{staff.designation}</td>
             <td>{departmentLabel(staff)}</td><td>{staff.email}</td><td><StatusBadge value={staff.status} /></td>
             <td><button type="button" className="secondary" onClick={() => view(staff)}>View</button>{" "}
@@ -124,6 +136,7 @@ export default function StaffPage() {
                 {staff.status === "ACTIVE" ? "Deactivate" : "Activate"}
               </button></td>
           </tr>)}
+          {!visibleRows.length && <tr><td colSpan="7" className="muted">No staff match the current filters.</td></tr>}
         </tbody>
       </table>
       </TableWrap>

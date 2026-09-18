@@ -15,6 +15,7 @@ const MODULE_ORDER = [
   "classes",
   "subjects",
   "fees",
+  "finance",
   "users",
   "school",
   "dashboard",
@@ -25,11 +26,14 @@ export default function RolesPage() {
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [roleSearch, setRoleSearch] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [roleForm, setRoleForm] = useState({ name: "", description: "", sensitivity: "NORMAL" });
+  const [editingRoleId, setEditingRoleId] = useState(null);
 
   async function load() {
     try {
@@ -96,6 +100,36 @@ export default function RolesPage() {
   function deselectAll() {
     if (!selected) return;
     setSelected({ ...selected, permissions: [] });
+  }
+
+  function startRoleEdit(role) {
+    setEditingRoleId(role.id);
+    setRoleForm({ name: role.name || "", description: role.description || "", sensitivity: role.sensitivity || "NORMAL" });
+  }
+
+  function cancelRoleEdit() {
+    setEditingRoleId(null);
+    setRoleForm({ name: "", description: "", sensitivity: "NORMAL" });
+  }
+
+  async function saveRole(event) {
+    event.preventDefault();
+    try {
+      setError("");
+      const saved = await api(editingRoleId ? `/api/roles/${editingRoleId}` : "/api/roles",
+        editingRoleId ? "PUT" : "POST", {
+          ...roleForm,
+          permissionIds: editingRoleId
+            ? (selected?.permissions || []).map((permission) => permission.id)
+            : []
+        });
+      setMessage(editingRoleId ? "Role updated." : "Role created.");
+      cancelRoleEdit();
+      await load();
+      if (saved?.id) setSelected(saved);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function save() {
@@ -197,8 +231,9 @@ export default function RolesPage() {
           <h3 style={{ margin: "0 0 10px", fontSize: "15px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Select Role
           </h3>
+          <input placeholder="Search roles" value={roleSearch} onChange={(e) => setRoleSearch(e.target.value)} />
           <ul className="role-list">
-            {roles.map((r) => {
+            {roles.filter((r) => `${r.name} ${r.description || ""}`.toLowerCase().includes(roleSearch.toLowerCase())).map((r) => {
               const isSelected = selected?.id === r.id;
               const grantedCount = r.permissions?.length || 0;
               return (
@@ -223,6 +258,15 @@ export default function RolesPage() {
               );
             })}
           </ul>
+          <form className="card form-card" onSubmit={saveRole}>
+            <h3>{editingRoleId ? "Edit role" : "Add role"}</h3>
+            <input required placeholder="Role name" value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} />
+            <input placeholder="Description" value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
+            <select value={roleForm.sensitivity} onChange={(e) => setRoleForm({ ...roleForm, sensitivity: e.target.value })}><option>NORMAL</option><option>FINANCIAL</option><option>HR_RESTRICTED</option></select>
+            <button>{editingRoleId ? "Save role" : "Create role"}</button>
+            {editingRoleId && <button type="button" className="secondary" onClick={cancelRoleEdit}>Cancel</button>}
+          </form>
+          {selected && <button type="button" className="secondary" onClick={() => startRoleEdit(selected)}>Edit selected role</button>}
         </div>
 
         {/* Right Column: Permission Management for Selected Role */}

@@ -21,5 +21,8 @@ public class FinanceReportResponse {
         private BigDecimal totalCollected;
         private BigDecimal totalConcession;
         private BigDecimal outstanding;
+        private BigDecimal totalPayroll;
+        private BigDecimal totalExpenses;
+        private BigDecimal totalPayments;
     }
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { api } from "../api/client.js";
+import PasswordField from "../components/PasswordField.jsx";
 
 const groups = [
   {
@@ -39,11 +41,15 @@ const groups = [
     label: "Finance",
     icon: "finance",
     links: [
+      { to: "/finance", label: "Finance dashboard", module: "finance", icon: "dashboard" },
+      { to: "/payroll", label: "Teacher & staff payroll", module: "finance", icon: "staff" },
+      { to: "/expenses", label: "Expenses", module: "finance", icon: "receipt" },
       { to: "/fee-heads", label: "Fee heads", module: "fees", icon: "tag" },
       { to: "/fee-structures", label: "Fee structures", module: "fees", icon: "layers" },
       { to: "/fee-accounts", label: "Student fee accounts", module: "fees", icon: "account" },
       { to: "/invoices", label: "Invoices & payments", module: "fees", icon: "receipt" },
-      { to: "/reports", label: "Fee reports", module: "fees", icon: "chart" }
+      { to: "/reports", label: "Student fee reports", module: "fees", icon: "chart" },
+      { to: "/financial-reports", label: "Financial reports", module: "finance", icon: "chart" }
     ]
   },
   {
@@ -57,16 +63,76 @@ const groups = [
 ];
 
 export default function Layout() {
-  const { user, can, logout } = useAuth();
+  const { user, can, logout, updateUser } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [dialog, setDialog] = useState(null);
+  const [profileForm, setProfileForm] = useState({ fullName: "", phone: "" });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
   const visibleGroups = groups
     .map((group) => ({ ...group, links: group.links.filter((link) => can(link.module, "view")) }))
     .filter((group) => group.links.length);
 
   useEffect(() => {
     setMenuOpen(false);
+    setProfileOpen(false);
   }, [location.pathname]);
+
+  function openProfile() {
+    setProfileForm({ fullName: user?.fullName || "", phone: user?.phone || "" });
+    setProfileMessage("");
+    setProfileError("");
+    setDialog("profile");
+    setProfileOpen(false);
+  }
+
+  function openPassword() {
+    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setProfileMessage("");
+    setProfileError("");
+    setDialog("password");
+    setProfileOpen(false);
+  }
+
+  async function saveProfile(event) {
+    event.preventDefault();
+    setSavingProfile(true);
+    setProfileError("");
+    setProfileMessage("");
+    try {
+      const updated = await api("/api/auth/me", "PUT", profileForm);
+      updateUser(updated);
+      setProfileMessage("Profile updated successfully.");
+    } catch (err) {
+      setProfileError(err.message);
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  async function changePassword(event) {
+    event.preventDefault();
+    setSavingProfile(true);
+    setProfileError("");
+    setProfileMessage("");
+    try {
+      await api("/api/auth/change-password", "POST", passwordForm);
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setProfileMessage("Password changed successfully.");
+    } catch (err) {
+      setProfileError(err.message);
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  const displayName = user?.fullName || user?.username || "Account";
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  const roles = Array.isArray(user?.roles) ? user.roles.map((role) => typeof role === "string" ? role : role.name).join(", ") : "—";
 
   return (
     <div className={`app-shell${menuOpen ? " menu-open" : ""}`}>
@@ -106,12 +172,58 @@ export default function Layout() {
               <strong>{user?.fullName || user?.username}</strong>
             </div>
           </div>
-          <button className="account-action" onClick={logout}>
-            <Icon name="logout" /> <span>Logout</span>
-          </button>
+          <div className="profile-menu">
+            <button type="button" className="profile-trigger" onClick={() => setProfileOpen((open) => !open)} aria-expanded={profileOpen}>
+              <span className="profile-avatar">{initials}</span>
+              <span className="profile-trigger-text"><strong>{displayName}</strong><small>{user?.email || user?.username}</small></span>
+              <Icon name="chevron" />
+            </button>
+            {profileOpen && (
+              <div className="profile-dropdown">
+                <div className="profile-summary">
+                  <span className="profile-avatar profile-avatar-large">{initials}</span>
+                  <strong>{displayName}</strong>
+                  <span>{user?.email || "—"}</span>
+                  <span>Role: {roles || "—"}</span>
+                  <span>Account: {user?.status || "ACTIVE"}</span>
+                  <span>Phone: {user?.phone || "—"}</span>
+                </div>
+                <button type="button" onClick={openProfile}>Edit My Profile</button>
+                <button type="button" onClick={openPassword}>Change Password</button>
+                <button type="button" className="profile-signout" onClick={logout}><Icon name="logout" /> Sign Out</button>
+              </div>
+            )}
+          </div>
         </header>
         <main className="content"><Outlet /></main>
       </div>
+      {dialog && <div className="modal-backdrop" role="presentation" onClick={() => setDialog(null)}>
+        <div className="modal-card" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+          <div className="modal-header"><h2>{dialog === "profile" ? "Edit My Profile" : "Change Password"}</h2><button type="button" className="linkish" onClick={() => setDialog(null)}>Close</button></div>
+          {profileError && <p className="error">{profileError}</p>}
+          {profileMessage && <p className="ok">{profileMessage}</p>}
+          {dialog === "profile" ? (
+            <form className="form-card" onSubmit={saveProfile}>
+              <label>Full name<input required value={profileForm.fullName} onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })} /></label>
+              <label>Phone number<input value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} /></label>
+              <label>Username<input value={user?.username || ""} readOnly /></label>
+              <label>Email<input value={user?.email || ""} readOnly /></label>
+              <label>Role<input value={roles || "—"} readOnly /></label>
+              <label>Account status<input value={user?.status || "ACTIVE"} readOnly /></label>
+              <p className="muted">Profile photo is not supported by the current user system.</p>
+              <button disabled={savingProfile}>{savingProfile ? "Saving..." : "Save profile"}</button>
+            </form>
+          ) : (
+            <form className="form-card" onSubmit={changePassword}>
+              <PasswordField required minLength={8} autoComplete="current-password" placeholder="Current password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} />
+              <PasswordField required minLength={8} autoComplete="new-password" placeholder="New password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} />
+              <PasswordField required minLength={8} autoComplete="new-password" placeholder="Confirm new password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} />
+              <p className="muted">Use at least 8 characters. New password and confirmation must match.</p>
+              <button disabled={savingProfile}>{savingProfile ? "Changing..." : "Change password"}</button>
+            </form>
+          )}
+        </div>
+      </div>}
     </div>
   );
 }

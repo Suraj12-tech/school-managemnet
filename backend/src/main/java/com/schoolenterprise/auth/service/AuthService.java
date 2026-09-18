@@ -3,6 +3,8 @@ package com.schoolenterprise.auth.service;
 import com.schoolenterprise.audit.service.AuditService;
 import com.schoolenterprise.auth.dto.LoginRequest;
 import com.schoolenterprise.auth.dto.LoginResponse;
+import com.schoolenterprise.auth.dto.ChangePasswordRequest;
+import com.schoolenterprise.auth.dto.ProfileUpdateRequest;
 import com.schoolenterprise.auth.entity.LoginSession;
 import com.schoolenterprise.auth.repository.LoginSessionRepository;
 import com.schoolenterprise.common.exception.AppException;
@@ -10,6 +12,7 @@ import com.schoolenterprise.common.security.AppUserDetails;
 import com.schoolenterprise.common.security.JwtService;
 import com.schoolenterprise.identity.entity.AppUser;
 import com.schoolenterprise.identity.repository.AppUserRepository;
+import com.schoolenterprise.identity.entity.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -58,6 +61,9 @@ public class AuthService {
                 .userId(user.getUserId())
                 .username(user.getUsername())
                 .fullName(dbUser.getFullName())
+                .email(dbUser.getEmail())
+                .phone(dbUser.getPhone())
+                .status(dbUser.getStatus())
                 .roles(user.getRoles())
                 .permissions(user.getPermissions())
                 .build();
@@ -107,5 +113,54 @@ public class AuthService {
             loginSessionRepository.save(session);
         });
         auditService.record("users", "reset-password", "AppUser", user.getId(), "Password changed");
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> currentProfile(AppUserDetails principal) {
+        AppUser user = userRepository.findById(principal.getUserId())
+                .orElseThrow(() -> AppException.notFound("User not found"));
+        return profileMap(user, principal);
+    }
+
+    @Transactional
+    public java.util.Map<String, Object> updateProfile(AppUserDetails principal, ProfileUpdateRequest request) {
+        AppUser user = userRepository.findById(principal.getUserId())
+                .orElseThrow(() -> AppException.notFound("User not found"));
+        user.setFullName(request.getFullName().trim());
+        user.setPhone(request.getPhone() == null ? null : request.getPhone().trim());
+        AppUser saved = userRepository.save(user);
+        auditService.record("users", "edit", "AppUser", saved.getId(), "Self-service profile updated");
+        return profileMap(saved, principal);
+    }
+
+    @Transactional
+    public void changePassword(AppUserDetails principal, ChangePasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw AppException.badRequest("Passwords do not match");
+        }
+        AppUser user = userRepository.findById(principal.getUserId())
+                .orElseThrow(() -> AppException.notFound("User not found"));
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw AppException.badRequest("Current password is incorrect");
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw AppException.badRequest("New password must be different from the current password");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        auditService.record("users", "edit", "AppUser", user.getId(), "Self-service password changed");
+    }
+
+    private java.util.Map<String, Object> profileMap(AppUser user, AppUserDetails principal) {
+        return java.util.Map.of(
+                "userId", user.getId(),
+                "username", user.getUsername(),
+                "email", user.getEmail(),
+                "fullName", user.getFullName(),
+                "phone", user.getPhone() == null ? "" : user.getPhone(),
+                "status", user.getStatus(),
+                "roles", principal.getRoles(),
+                "permissions", principal.getPermissions()
+        );
     }
 }

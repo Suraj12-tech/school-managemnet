@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import PageHeader from "../components/PageHeader.jsx";
 import TableWrap from "../components/TableWrap.jsx";
+import { exportCsv } from "../utils/exportCsv.js";
 
 const emptyFilters = { userId: "", module: "", action: "", from: "", to: "" };
 
@@ -50,6 +51,7 @@ export default function AuditPage() {
           <option value="users">Users</option><option value="students">Students</option>
           <option value="staff">Staff</option><option value="classes">Classes</option>
           <option value="school">School</option><option value="fees">Fees</option>
+          <option value="finance">Finance</option>
           <option value="audit">Audit</option>
         </select>
         <select value={filters.action} onChange={(e) => setFilters({ ...filters, action: e.target.value })}>
@@ -61,6 +63,7 @@ export default function AuditPage() {
         <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} />
         <button type="submit">Apply Filters</button>
         <button type="button" onClick={clear}>Clear</button>
+        <button type="button" className="secondary" onClick={() => exportCsv("audit-log.csv", rows)}>Export</button>
       </form>
       <TableWrap>
       <table>

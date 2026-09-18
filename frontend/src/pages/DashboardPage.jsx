@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api/client.js";
 import PageHeader from "../components/PageHeader.jsx";
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
@@ -41,7 +43,18 @@ export default function DashboardPage() {
       <div className="card">
         <h3>Alerts</h3>
         {data.alerts?.length ? (
-          <ul className="list">{data.alerts.map((a) => <li key={a}>{a}</li>)}</ul>
+          <ul className="list">{data.alerts.map((alert) => {
+            const isOverdue = /^\d+ invoice\(s\) are overdue$/.test(alert);
+            return (
+              <li key={alert}>
+                {isOverdue ? (
+                  <button type="button" className="alert-action" onClick={() => navigate("/invoices?status=OVERDUE")}>
+                    {alert}<span aria-hidden="true">View overdue invoices →</span>
+                  </button>
+                ) : alert}
+              </li>
+            );
+          })}</ul>
         ) : (
           <p className="muted">No pending administrative alerts.</p>
         )}

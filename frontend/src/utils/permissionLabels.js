@@ -29,6 +29,12 @@ export const MODULE_DEFINITIONS = {
     description: "Fee heads, structures, student billing accounts, invoices, and payments",
     icon: "💰"
   },
+  finance: {
+    key: "finance",
+    name: "Finance",
+    description: "Payroll, expenses, collections, and consolidated financial reporting",
+    icon: "📈"
+  },
   users: {
     key: "users",
     name: "Users",
@@ -78,6 +84,7 @@ const MODULE_NOUNS = {
   subjects: "Subjects",
   subject: "Subjects",
   fees: "Fees",
+  finance: "Finance",
   fee: "Fees",
   users: "Users",
   user: "Users",

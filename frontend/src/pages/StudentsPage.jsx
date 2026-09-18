@@ -4,6 +4,7 @@ import { api } from "../api/client.js";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TableWrap from "../components/TableWrap.jsx";
+import { exportCsv } from "../utils/exportCsv.js";
 
 const emptyForm = {
   admissionNumber: "", firstName: "", lastName: "", dateOfBirth: "", gender: "",
@@ -18,6 +19,8 @@ export default function StudentsPage() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
@@ -82,11 +85,21 @@ export default function StudentsPage() {
   );
   const className = (id) => classes.find((item) => item.id === id)?.name || `#${id}`;
   const section = (id) => sections.find((item) => item.id === id);
+  const visibleStudents = students.filter((student) => {
+    const text = `${student.admissionNumber} ${student.firstName} ${student.lastName}`.toLowerCase();
+    return text.includes(query.toLowerCase())
+      && (statusFilter === "ALL" || student.status === statusFilter);
+  });
 
   return (
     <div>
       <PageHeader title="Students" description="Maintain student records, enrollment, and account status." />
       {error && <p className="error">{error}</p>}
+      <div className="card filter-bar">
+        <input aria-label="Search students" placeholder="Search by admission number or name" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>ACTIVE</option><option>INACTIVE</option></select>
+        <button type="button" className="secondary" onClick={() => exportCsv("students.csv", visibleStudents.map((student) => ({ admissionNumber: student.admissionNumber, name: `${student.firstName} ${student.lastName}`, status: student.status })))}>Export</button>
+      </div>
       <form className="card form-card" onSubmit={save}>
         <h3>{editingId ? "Edit student" : "Create student"}</h3>
         <input required placeholder="Admission No" value={form.admissionNumber}
@@ -131,7 +144,7 @@ export default function StudentsPage() {
       <table>
         <thead><tr><th>Admission No</th><th>Student Name</th><th>Class</th><th>Section</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
-          {students.map((student) => {
+          {visibleStudents.map((student) => {
             const currentSection = section(student.currentSectionId);
             return <tr key={student.id}>
               <td><Link to={`/students/${student.id}`}>{student.admissionNumber}</Link></td>
@@ -145,6 +158,7 @@ export default function StudentsPage() {
                 </button></td>
             </tr>;
           })}
+          {!visibleStudents.length && <tr><td colSpan="6" className="muted">No students match the current filters.</td></tr>}
         </tbody>
       </table>
       </TableWrap>

@@ -14,6 +14,8 @@ export default function ClassesPage() {
   const [editingSectionId, setEditingSectionId] = useState(null);
   const [selectedClassDetails, setSelectedClassDetails] = useState(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [yearFilter, setYearFilter] = useState("ALL");
   const sectionNames = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   async function loadSections() {
@@ -104,6 +106,10 @@ export default function ClassesPage() {
     && selectedClass
     && section.academicYearId
     && selectedYearSectionCount >= Number(selectedClass.numberOfClassrooms || 0);
+  const visibleSections = sections.filter((item) =>
+    `${item.name} ${item.className || ""} ${item.classTeacherName || ""}`.toLowerCase().includes(query.toLowerCase())
+    && (yearFilter === "ALL" || String(item.academicYearId) === yearFilter)
+  );
 
   async function changeSectionStatus(id, status) {
     try {
@@ -127,6 +133,10 @@ export default function ClassesPage() {
     <div>
       <PageHeader title="Classes & sections" description="Create classes, organize sections, and assign class teachers." />
       {error && <p className="error">{error}</p>}
+      <div className="card filter-bar">
+        <input placeholder="Search classes and sections" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}><option value="ALL">All academic years</option>{years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</select>
+      </div>
       <form className="card form-card" onSubmit={saveClass}>
         <h3>New class</h3>
         <input required placeholder="Class 1" value={klass.name} onChange={(e) => setKlass({ ...klass, name: e.target.value })} />
@@ -210,7 +220,7 @@ export default function ClassesPage() {
           </tr>
         </thead>
         <tbody>
-          {sections.map((s) => (
+          {visibleSections.map((s) => (
             <tr key={s.id}>
               <td>{s.name}</td>
               <td>{s.className || classes.find((c) => String(c.id) === String(s.classId))?.name || `Class ${s.classId}`}</td>
@@ -233,6 +243,7 @@ export default function ClassesPage() {
               </td>
             </tr>
           ))}
+          {!visibleSections.length && <tr><td colSpan="7" className="muted">No sections match the current filters.</td></tr>}
           {!sections.length && (
             <tr><td colSpan="7">No sections created yet.</td></tr>
           )}

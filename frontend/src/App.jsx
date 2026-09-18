@@ -20,6 +20,9 @@ import FeeStructuresPage from "./pages/FeeStructuresPage.jsx";
 import FeeAccountsPage from "./pages/FeeAccountsPage.jsx";
 import InvoicesPage from "./pages/InvoicesPage.jsx";
 import ReportsPage from "./pages/ReportsPage.jsx";
+import PayrollPage from "./pages/PayrollPage.jsx";
+import ExpensesPage from "./pages/ExpensesPage.jsx";
+import FinancialReportsPage from "./pages/FinancialReportsPage.jsx";
 import AuditPage from "./pages/AuditPage.jsx";
 
 function Private({ children }) {
@@ -51,6 +54,10 @@ export default function App() {
         <Route path="fee-accounts" element={<FeeAccountsPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="finance" element={<FinancialReportsPage />} />
+        <Route path="payroll" element={<PayrollPage />} />
+        <Route path="expenses" element={<ExpensesPage />} />
+        <Route path="financial-reports" element={<FinancialReportsPage />} />
         <Route path="audit" element={<AuditPage />} />
       </Route>
     </Routes>

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client.js";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
+import { exportCsv } from "../utils/exportCsv.js";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -13,6 +15,14 @@ export default function InvoicesPage() {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [viewingInvoice, setViewingInvoice] = useState(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const requestedStatus = searchParams.get("status");
+    if (requestedStatus === "OVERDUE") setStatusFilter("OVERDUE");
+  }, [searchParams]);
 
   async function load() {
     const [invoiceRows, receiptRows, studentRows, structureRows] = await Promise.all([
@@ -31,6 +41,15 @@ export default function InvoicesPage() {
     [invoices]
   );
   const selectedInvoice = payableInvoices.find((invoice) => String(invoice.id) === String(pay.invoiceId));
+  const isOverdue = (invoice) => {
+    const today = new Date().toISOString().slice(0, 10);
+    return (invoice.status === "UNPAID" || invoice.status === "PARTIAL")
+      && invoice.dueDate && invoice.dueDate < today;
+  };
+  const visibleInvoices = invoices.filter((invoice) =>
+    `${invoice.invoiceNumber} ${invoice.student} ${invoice.feeStructure}`.toLowerCase().includes(query.toLowerCase())
+    && (statusFilter === "ALL" || (statusFilter === "OVERDUE" ? isOverdue(invoice) : invoice.status === statusFilter))
+  );
 
   async function createInvoice(e) {
     e.preventDefault();
@@ -70,6 +89,12 @@ export default function InvoicesPage() {
     <div>
       <PageHeader title="Invoices, payments & receipts" description="Create invoices, record payments, and review issued receipts." />
       {error && <p className="error">{error}</p>}
+      {statusFilter === "OVERDUE" && <div className="card overdue-filter-banner"><strong>Showing overdue invoices</strong><span>Unpaid or partially paid invoices past their due date.</span></div>}
+      <div className="card filter-bar">
+        <input placeholder="Search invoices by number or student" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option value="OVERDUE">OVERDUE</option><option>UNPAID</option><option>PARTIAL</option><option>PAID</option></select>
+        <button type="button" className="secondary" onClick={() => exportCsv("invoices.csv", visibleInvoices.map((invoice) => ({ invoice: invoice.invoiceNumber, student: invoice.student, total: invoice.totalAmount, paid: invoice.paidAmount, outstanding: invoice.outstanding, status: invoice.status })))}>Export</button>
+      </div>
       <form className="card form-card" onSubmit={createInvoice}>
         <h3>Create invoice from fee structure</h3>
         <select required value={form.studentId} onChange={(e) => setForm({ ...form, studentId: e.target.value })}>
@@ -86,16 +111,17 @@ export default function InvoicesPage() {
       </form>
 
       <table>
-        <thead><tr><th>Invoice No</th><th>Student</th><th>Fee Structure</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>{invoices.map((invoice) => (
+        <thead><tr><th>Invoice No</th><th>Student</th><th>Class/Section</th><th>Due Date</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>{visibleInvoices.map((invoice) => (
           <tr key={invoice.id}>
             <td>{invoice.invoiceNumber}</td><td>{invoice.student || invoice.studentId}</td>
-            <td>{invoice.feeStructure || invoice.feeStructureId || "-"}</td>
+            <td>{[invoice.className, invoice.sectionName].filter(Boolean).join(" / ") || "-"}</td>
+            <td>{invoice.dueDate || "-"}</td>
             <td>{Number(invoice.totalAmount).toFixed(2)}</td><td>{Number(invoice.paidAmount).toFixed(2)}</td>
             <td>{Number(invoice.outstanding).toFixed(2)}</td><td><StatusBadge value={invoice.status} /></td>
             <td><button type="button" onClick={() => viewInvoice(invoice)}>View</button></td>
           </tr>
-        ))}</tbody>
+        ))}{!visibleInvoices.length && <tr><td colSpan="9" className="muted">No invoices match the current filters.</td></tr>}</tbody>
       </table>
       {viewingInvoice && <div className="card">
         <h3>Invoice {viewingInvoice.invoiceNumber}</h3>

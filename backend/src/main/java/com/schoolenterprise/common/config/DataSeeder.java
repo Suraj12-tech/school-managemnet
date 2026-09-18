@@ -37,7 +37,7 @@ public class DataSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     private static final String[] MODULES = {
-            "students", "staff", "classes", "subjects", "fees", "users", "school", "audit", "dashboard"
+            "students", "staff", "classes", "subjects", "fees", "finance", "users", "school", "audit", "dashboard"
     };
     private static final String[] ACTIONS = {
             "view", "create", "edit", "delete", "approve", "publish", "export"
@@ -58,7 +58,7 @@ public class DataSeeder implements CommandLineRunner {
         Role adminRole = seedRole("ADMIN", "Full school access", "FINANCIAL", true);
         seedRole("PRINCIPAL", "School academic head", "HR_RESTRICTED", true);
         Role accountant = seedRole("ACCOUNTANT", "Fee and accounts only", "FINANCIAL", false);
-        grant(accountant, List.of("fees", "dashboard", "students", "school", "audit"), List.of("view", "create", "edit", "approve", "export"));
+        grant(accountant, List.of("fees", "finance", "dashboard", "students", "school", "audit"), List.of("view", "create", "edit", "approve", "export"));
         Role classTeacher = seedRole("CLASS_TEACHER", "Assigned section students", "NORMAL", false);
         grant(classTeacher, List.of("students", "classes", "subjects", "dashboard"), List.of("view", "edit"));
         Role subjectTeacher = seedRole("SUBJECT_TEACHER", "Assigned subjects only", "NORMAL", false);
@@ -97,7 +97,7 @@ public class DataSeeder implements CommandLineRunner {
                     p.setModuleName(module);
                     p.setActionName(action);
                     p.setDescription(generateDescription(module, action));
-                    p.setSensitivity("fees".equals(module) ? "FINANCIAL" : "staff".equals(module) ? "HR_RESTRICTED" : "NORMAL");
+                    p.setSensitivity("fees".equals(module) || "finance".equals(module) ? "FINANCIAL" : "staff".equals(module) ? "HR_RESTRICTED" : "NORMAL");
                     return permissionRepository.save(p);
                 });
             }
@@ -150,6 +150,15 @@ public class DataSeeder implements CommandLineRunner {
                 case "approve" -> "Approve fee concessions, waivers, and adjustments";
                 case "export" -> "Export financial summaries and fee collection reports";
                 default -> "Publish fee circulars and schedule announcements";
+            };
+            case "finance" -> switch (action) {
+                case "view" -> "View payroll, expenses, payment records, and financial summaries";
+                case "create" -> "Create payroll and expense records";
+                case "edit" -> "Manage payroll, expense, and finance records";
+                case "delete" -> "Remove finance records where permitted";
+                case "approve" -> "Approve payroll and expense payments";
+                case "export" -> "Export consolidated financial reports";
+                default -> "Publish finance schedules and notices";
             };
             case "users" -> switch (action) {
                 case "view" -> "View administrator accounts and configured roles";
@@ -205,10 +214,7 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void grant(Role role, List<String> modules, List<String> actions) {
-        if (!role.getPermissions().isEmpty()) {
-            return;
-        }
-        Set<Permission> set = new HashSet<>();
+        Set<Permission> set = new HashSet<>(role.getPermissions());
         for (Permission p : permissionRepository.findAll()) {
             if (modules.contains(p.getModuleName()) && actions.contains(p.getActionName())) {
                 set.add(p);

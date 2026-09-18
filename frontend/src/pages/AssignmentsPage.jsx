@@ -19,6 +19,7 @@ export default function AssignmentsPage() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
 
   async function load() {
     try {
@@ -87,12 +88,16 @@ export default function AssignmentsPage() {
     (!form.classId || String(section.classId) === String(form.classId))
     && (!form.academicYearId || String(section.academicYearId) === String(form.academicYearId))
   );
+  const visibleRows = rows.filter((row) =>
+    `${row.teacherName} ${row.subjectName} ${row.className} ${row.sectionName} ${row.academicYearName}`.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <div>
       <PageHeader title="Teacher assignments" description="Assign subject and class teachers for each academic year." />
       <p className="muted">Subject teachers require a subject; class teachers are assigned to one section.</p>
       {error && <p className="error">{error}</p>}
+      <div className="card filter-bar"><input placeholder="Search assignments" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
       <form className="card form-card" onSubmit={save}>
         <h3>{editingId ? "Edit assignment" : "New assignment"}</h3>
         <select required value={form.assignmentType}
@@ -142,7 +147,7 @@ export default function AssignmentsPage() {
       <table>
         <thead><tr><th>Teacher</th><th>Subject</th><th>Class</th><th>Section</th><th>Academic Year</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
-          {rows.map((row) => <tr key={row.id}>
+          {visibleRows.map((row) => <tr key={row.id}>
             <td>{row.teacherName || `#${row.staffId}`}</td>
             <td>{row.subjectName || "—"}</td><td>{row.className || `#${row.classId}`}</td>
             <td>{row.sectionName || "—"}</td><td>{row.academicYearName || `#${row.academicYearId}`}</td>
@@ -153,7 +158,7 @@ export default function AssignmentsPage() {
                 ? <button type="button" onClick={() => setStatus(row, "INACTIVE")}>Deactivate</button>
                 : <button type="button" onClick={() => setStatus(row, "ACTIVE")}>Activate</button>}{" "}
               <button type="button" className="secondary" onClick={() => unassign(row)}>Unassign</button></td>
-          </tr>)}
+          </tr>)}{!visibleRows.length && <tr><td colSpan="8" className="muted">No assignments found.</td></tr>}
         </tbody>
       </table>
       </TableWrap>

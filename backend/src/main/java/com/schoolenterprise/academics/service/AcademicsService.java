@@ -45,11 +45,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -75,142 +71,357 @@ public class AcademicsService {
 
     public List<DepartmentSummary> departments() {
         Long schoolId = schoolService.getSchool().getId();
-        return departmentRepository.findBySchoolId(schoolId).stream()
+        List<Department> departments =
+                departmentRepository.findBySchoolId(schoolId);
+        List<DepartmentSummary> summaries = departments.stream()
                 .map(this::departmentSummary)
                 .toList();
+        return summaries;
     }
 
     public DepartmentDetail department(Long id) {
+
         Department department = departmentForSchool(id);
-        List<SubjectSummary> subjects = subjectRepository.findBySchoolId(schoolService.getSchool().getId()).stream()
-                .filter(subject -> Objects.equals(subject.getDepartmentId(), id))
-                .map(this::subjectSummary)
-                .toList();
-        return new DepartmentDetail(departmentSummary(department), subjects);
+
+        Long schoolId = schoolService.getSchool().getId();
+
+        List<Subject> subjects = subjectRepository.findBySchoolId(schoolId);
+
+        List<SubjectSummary> subjectSummaries = new ArrayList<>();
+
+        for (Subject subject : subjects) {
+
+            if (Objects.equals(subject.getDepartmentId(), id)) {
+
+                SubjectSummary summary = subjectSummary(subject);
+                subjectSummaries.add(summary);
+            }
+        }
+        return new DepartmentDetail(
+                departmentSummary(department),
+                subjectSummaries
+        );
     }
 
     @Transactional
     public Department saveDepartment(Long id, DepartmentRequest request) {
+
         Long schoolId = schoolService.getSchool().getId();
+
         String name = request.getName().trim();
-        Department department = id == null
-                ? new Department()
-                : departmentForSchool(id);
-        boolean duplicate = departmentRepository.findBySchoolId(schoolId).stream()
-                .anyMatch(existing -> !Objects.equals(existing.getId(), id)
-                        && existing.getName().equalsIgnoreCase(name));
+
+        Department department;
+
+        if (id == null) {
+            department = new Department();
+        } else {
+            department = departmentForSchool(id);
+        }
+
+        boolean duplicate = false;
+
+        List<Department> departments =
+                departmentRepository.findBySchoolId(schoolId);
+
+        for (Department existing : departments) {
+
+            if (!Objects.equals(existing.getId(), id)) {
+
+                if (existing.getName().equalsIgnoreCase(name)) {
+                    duplicate = true;
+                    break;
+                }
+            }
+        }
+
         if (duplicate) {
             throw com.schoolenterprise.common.exception.AppException.badRequest(
-                    "Department name already exists in this school");
+                    "Department name already exists in this school"
+            );
         }
+
         department.setSchoolId(schoolId);
         department.setName(name);
+
         String requestedCode = blankToNull(request.getCode());
-        department.setCode(requestedCode != null
-                ? requestedCode
-                : (department.getCode() == null ? generatedDepartmentCode(name) : department.getCode()));
-        department.setDescription(blankToNull(request.getDescription()));
-        department.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
+
+        if (requestedCode != null) {
+            department.setCode(requestedCode);
+        } else {
+
+            if (department.getCode() == null) {
+                String generatedCode = generatedDepartmentCode(name);
+                department.setCode(generatedCode);
+            }
+        }
+        String description = blankToNull(request.getDescription());
+        department.setDescription(description);
+
+        if (request.getStatus() == null) {
+            department.setStatus("ACTIVE");
+        } else {
+            department.setStatus(request.getStatus());
+        }
+
         Department saved = departmentRepository.save(department);
-        auditService.record("classes", "edit", "Department", saved.getId(), saved.getName());
+
+        auditService.record(
+                "classes",
+                "edit",
+                "Department",
+                saved.getId(),
+                saved.getName()
+        );
+
         return saved;
     }
+
+
+
 
     @Transactional
     public Department updateDepartmentStatus(Long id, String status) {
         validateStatus(status);
+
         Department department = departmentForSchool(id);
+
         department.setStatus(status);
+
         Department saved = departmentRepository.save(department);
-        auditService.record("classes", "edit", "Department", id, "Status " + status);
+
+        auditService.record(
+                "classes",
+                "edit",
+                "Department",
+                id,
+                "Status " + status
+        );
+
         return saved;
     }
 
     @Transactional
     public void deleteDepartment(Long id) {
+
         Department department = departmentForSchool(id);
-        for (Subject subject : subjectRepository.findBySchoolId(department.getSchoolId()).stream()
-                .filter(item -> Objects.equals(item.getDepartmentId(), id))
-                .toList()) {
-            deleteSubject(subject.getId());
+
+        List<Subject> subjects =
+                subjectRepository.findBySchoolId(department.getSchoolId());
+
+        for (Subject subject : subjects) {
+
+            if (Objects.equals(subject.getDepartmentId(), id)) {
+                deleteSubject(subject.getId());
+            }
         }
-        for (Staff staff : staffRepository.findByDepartmentId(id)) {
+
+        List<Staff> staffList =
+                staffRepository.findByDepartmentId(id);
+
+        for (Staff staff : staffList) {
+
             staff.setDepartmentId(null);
+
             staffRepository.save(staff);
         }
+
         departmentRepository.delete(department);
-        auditService.record("classes", "delete", "Department", id, department.getName());
+
+        auditService.record(
+                "classes",
+                "delete",
+                "Department",
+                id,
+                department.getName()
+        );
     }
 
     public List<SubjectSummary> subjects() {
-        List<Subject> all = subjectRepository.findAll();
+
+        List<Subject> allSubjects = subjectRepository.findAll();
+
         Long schoolId = schoolService.getSchool().getId();
-        List<Subject> schoolSubjects = all.stream()
-                .filter(subject -> Objects.equals(subject.getSchoolId(), schoolId))
-                .toList();
-        if (permissionService.hasSchoolWideAccess()) {
-            return schoolSubjects.stream().map(this::subjectSummary).toList();
+
+        List<Subject> schoolSubjects = new ArrayList<>();
+
+        for (Subject subject : allSubjects) {
+
+            if (Objects.equals(subject.getSchoolId(), schoolId)) {
+                schoolSubjects.add(subject);
+            }
         }
-        return schoolSubjects.stream()
-                .filter(s -> permissionService.allowedSubjectIds().contains(s.getId()))
-                .map(this::subjectSummary)
-                .toList();
+
+        if (permissionService.hasSchoolWideAccess()) {
+
+            List<SubjectSummary> summaries = new ArrayList<>();
+
+            for (Subject subject : schoolSubjects) {
+                SubjectSummary summary = subjectSummary(subject);
+                summaries.add(summary);
+            }
+
+            return summaries;
+        }
+
+        Set<Long> allowedSubjectIds =
+                permissionService.allowedSubjectIds();
+
+        List<SubjectSummary> summaries = new ArrayList<>();
+
+        for (Subject subject : schoolSubjects) {
+
+            if (allowedSubjectIds.contains(subject.getId())) {
+
+                SubjectSummary summary = subjectSummary(subject);
+
+                summaries.add(summary);
+            }
+        }
+
+        return summaries;
     }
 
     public SubjectDetail subject(Long id) {
         Subject subject = subjectForSchool(id);
+
+        List<SubjectClassMapping> mappings =
+                subjectClassMappingRepository.findBySubjectId(id);
+
+        List<SubjectClassMappingView> mappingViews =
+                new ArrayList<>();
+
+        for (SubjectClassMapping mapping : mappings) {
+
+            SubjectClassMappingView view = mappingView(mapping);
+
+            mappingViews.add(view);
+        }
+
+        SubjectSummary subjectSummary = subjectSummary(subject);
+
+        List<String> teachers = teacherNames(id);
+
         return new SubjectDetail(
-                subjectSummary(subject),
-                subjectClassMappingRepository.findBySubjectId(id).stream()
-                        .map(this::mappingView)
-                        .toList(),
-                teacherNames(id));
+                subjectSummary,
+                mappingViews,
+                teachers
+        );
     }
 
     @Transactional
     public Subject saveSubject(Long id, SubjectRequest request) {
+
         Long schoolId = schoolService.getSchool().getId();
-        Department department = departmentForSchool(request.getDepartmentId());
+
+        Department department =
+                departmentForSchool(request.getDepartmentId());
+
         if (!"ACTIVE".equals(department.getStatus())) {
+
             throw com.schoolenterprise.common.exception.AppException.badRequest(
-                    "Subjects can only be assigned to an active department");
+                    "Subjects can only be assigned to an active department"
+            );
         }
+
         String name = request.getName().trim();
+
         String code = request.getCode().trim().toUpperCase();
-        boolean duplicateCode = subjectRepository.findBySchoolId(schoolId).stream()
-                .anyMatch(existing -> !Objects.equals(existing.getId(), id)
-                        && existing.getCode().equalsIgnoreCase(code));
+
+        List<Subject> subjects =
+                subjectRepository.findBySchoolId(schoolId);
+
+        boolean duplicateCode = false;
+
+        for (Subject existing : subjects) {
+
+            if (!Objects.equals(existing.getId(), id)) {
+
+                if (existing.getCode().equalsIgnoreCase(code)) {
+                    duplicateCode = true;
+                    break;
+                }
+            }
+        }
+
         if (duplicateCode) {
+
             throw com.schoolenterprise.common.exception.AppException.badRequest(
-                    "Subject code already exists in this school");
+                    "Subject code already exists in this school"
+            );
         }
-        boolean duplicateName = subjectRepository.findBySchoolId(schoolId).stream()
-                .anyMatch(existing -> !Objects.equals(existing.getId(), id)
-                        && existing.getName().equalsIgnoreCase(name));
+
+        boolean duplicateName = false;
+
+        for (Subject existing : subjects) {
+            if (!Objects.equals(existing.getId(), id)) {
+
+                if (existing.getName().equalsIgnoreCase(name)) {
+                    duplicateName = true;
+                    break;
+                }
+            }
+        }
+
         if (duplicateName) {
+
             throw com.schoolenterprise.common.exception.AppException.badRequest(
-                    "Subject name already exists in this school");
+                    "Subject name already exists in this school"
+            );
         }
-        Subject subject = id == null ? new Subject() : subjectForSchool(id);
+
+        Subject subject;
+
+        if (id == null) {
+            subject = new Subject();
+        } else {
+            subject = subjectForSchool(id);
+        }
+
         subject.setSchoolId(schoolId);
         subject.setDepartmentId(department.getId());
         subject.setName(name);
         subject.setCode(code);
-        subject.setDescription(blankToNull(request.getDescription()));
-        subject.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
+
+        String description = blankToNull(request.getDescription());
+        subject.setDescription(description);
+
+        if (request.getStatus() == null) {
+            subject.setStatus("ACTIVE");
+        } else {
+            subject.setStatus(request.getStatus());
+        }
         Subject saved = subjectRepository.save(subject);
-        auditService.record("subjects", "edit", "Subject", saved.getId(), saved.getName());
+
+        auditService.record(
+                "subjects",
+                "edit",
+                "Subject",
+                saved.getId(),
+                saved.getName()
+        );
         return saved;
     }
 
     @Transactional
     public Subject updateSubjectStatus(Long id, String status) {
+
         validateStatus(status);
+
         Subject subject = subjectForSchool(id);
+
         subject.setStatus(status);
-        Subject saved = subjectRepository.save(subject);
-        auditService.record("subjects", "edit", "Subject", id, "Status " + status);
-        return saved;
+
+        Subject savedSubject = subjectRepository.save(subject);
+
+        auditService.record(
+                "subjects",
+                "edit",
+                "Subject",
+                id,
+                "Status " + status
+        );
+
+        return savedSubject;
     }
 
     @Transactional

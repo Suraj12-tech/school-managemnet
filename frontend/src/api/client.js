@@ -1,50 +1,61 @@
-// Use Vite's same-origin proxy during local development. Set VITE_API_URL
-// explicitly for deployments where the API has a different origin.
-const API = import.meta.env.VITE_API_URL ?? "";
+import { clearSession, getToken } from "../auth/authStorage.js";
+
+// Empty API_URL uses Vite's same-origin proxy during local development.
+// Set VITE_API_URL when the frontend and backend run on different servers.
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 export async function api(path, method = "GET", body) {
-  const token = localStorage.getItem("token");
+  const token = getToken();
   let response;
+
   try {
-    response = await fetch(API + path, {
+    response = await fetch(API_URL + path, {
       method,
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: "Bearer " + token } : {})
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: body ? JSON.stringify(body) : undefined
     });
   } catch {
     throw new Error("Cannot reach the API. Start the backend on port 8080.");
   }
-  const text = await response.text();
-  let json = {};
-  try {
-    json = text ? JSON.parse(text) : {};
-  } catch {
-    json = {};
-  }
 
+  const json = await readResponse(response);
   if (response.status === 401) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearSession();
     window.dispatchEvent(new Event("auth:expired"));
   }
 
-  if (!response.ok || json.success === false) {
-    const fallback = response.status === 401
-      ? "Your session has expired. Please log in again."
-      : response.status === 403
-        ? "You do not have permission to perform this action."
-        : response.status === 404
-          ? "The requested resource was not found."
-          : `Request failed (${response.status})`;
-    throw new Error(json.message || fallback);
+  if (response.ok && json.success !== false) {
+    return json.data;
   }
-  return json.data;
+
+  throw new Error(json.message || getErrorMessage(response.status));
 }
 
 export async function apiList(path) {
   const data = await api(path);
   return Array.isArray(data) ? data : [];
+}
+
+async function readResponse(response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
+}
+
+function getErrorMessage(status) {
+  const messages = {
+    401: "Your session has expired. Please log in again.",
+    403: "You do not have permission to perform this action.",
+    404: "The requested resource was not found."
+  };
+
+  return messages[status] || `Request failed (${status})`;
 }

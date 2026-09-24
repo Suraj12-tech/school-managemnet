@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 
 export default function ClassesPage() {
@@ -12,6 +13,8 @@ export default function ClassesPage() {
     name: "A", classId: "", academicYearId: "", classTeacherStaffId: "", status: "ACTIVE"
   });
   const [editingSectionId, setEditingSectionId] = useState(null);
+  const [showClassForm, setShowClassForm] = useState(false);
+  const [showSectionForm, setShowSectionForm] = useState(false);
   const [selectedClassDetails, setSelectedClassDetails] = useState(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -33,13 +36,35 @@ export default function ClassesPage() {
   }
   useEffect(() => { load(); }, []);
 
+  function openClassForm() {
+    setKlass({ name: "", numberOfClassrooms: 1 });
+    setShowClassForm(true);
+  }
+
+  function closeClassForm() {
+    setShowClassForm(false);
+    setKlass({ name: "", numberOfClassrooms: 1 });
+  }
+
   async function saveClass(e) {
     e.preventDefault();
     try {
       await api("/api/classes", "POST", { ...klass, numberOfClassrooms: Number(klass.numberOfClassrooms) });
-      setKlass({ name: "", numberOfClassrooms: 1 });
+      closeClassForm();
       load();
     } catch (err) { setError(err.message); }
+  }
+
+  function openSectionForm() {
+    setEditingSectionId(null);
+    setSection({ name: "A", classId: "", academicYearId: "", classTeacherStaffId: "", status: "ACTIVE" });
+    setShowSectionForm(true);
+  }
+
+  function closeSectionForm() {
+    setShowSectionForm(false);
+    setEditingSectionId(null);
+    setSection({ name: "A", classId: "", academicYearId: "", classTeacherStaffId: "", status: "ACTIVE" });
   }
 
   async function saveSection(e) {
@@ -57,8 +82,7 @@ export default function ClassesPage() {
         editingSectionId ? "PUT" : "POST",
         editingSectionId ? { id: editingSectionId, ...payload } : payload
       );
-      setSection({ name: "A", classId: "", academicYearId: "", classTeacherStaffId: "", status: "ACTIVE" });
-      setEditingSectionId(null);
+      closeSectionForm();
       setSelectedClassDetails(null);
       await load();
     } catch (err) { setError(err.message); }
@@ -74,6 +98,7 @@ export default function ClassesPage() {
       status: item.status || "ACTIVE"
     });
     setSelectedClassDetails(null);
+    setShowSectionForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -92,8 +117,7 @@ export default function ClassesPage() {
   }
 
   function cancelEdit() {
-    setEditingSectionId(null);
-    setSection({ name: "A", classId: "", academicYearId: "", classTeacherStaffId: "", status: "ACTIVE" });
+    closeSectionForm();
   }
 
   const selectedClass = classes.find((item) => String(item.id) === String(section.classId));
@@ -131,19 +155,24 @@ export default function ClassesPage() {
 
   return (
     <div>
-      <PageHeader title="Classes & sections" description="Create classes, organize sections, and assign class teachers." />
+      <PageHeader title="Classes & sections" description="Create classes, organize sections, and assign class teachers." actions={<>
+        <button type="button" onClick={openClassForm}>Add Class</button>
+        <button type="button" className="secondary" onClick={openSectionForm}>Add Section</button>
+      </>} />
       {error && <p className="error">{error}</p>}
       <div className="card filter-bar">
         <input placeholder="Search classes and sections" value={query} onChange={(e) => setQuery(e.target.value)} />
         <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}><option value="ALL">All academic years</option>{years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</select>
       </div>
-      <form className="card form-card" onSubmit={saveClass}>
-        <h3>New class</h3>
-        <input required placeholder="Class 1" value={klass.name} onChange={(e) => setKlass({ ...klass, name: e.target.value })} />
-        <label>Number of classrooms</label>
-        <input required min="1" type="number" value={klass.numberOfClassrooms} onChange={(e) => setKlass({ ...klass, numberOfClassrooms: e.target.value })} />
-        <button>Create class</button>
-      </form>
+      <ActionModal open={showClassForm} title="Create class" onClose={closeClassForm}>
+        <form className="card form-card" onSubmit={saveClass}>
+          <input required placeholder="Class 1" value={klass.name} onChange={(e) => setKlass({ ...klass, name: e.target.value })} />
+          <label>Number of classrooms</label>
+          <input required min="1" type="number" value={klass.numberOfClassrooms} onChange={(e) => setKlass({ ...klass, numberOfClassrooms: e.target.value })} />
+          <button>Create class</button>
+          <button type="button" className="secondary" onClick={closeClassForm}>Cancel</button>
+        </form>
+      </ActionModal>
       <h3>Classes / Grades</h3>
       <table>
         <thead><tr><th>Class</th><th>Classrooms</th></tr></thead>
@@ -151,36 +180,37 @@ export default function ClassesPage() {
           {classes.map((c) => <tr key={c.id}><td>{c.name}</td><td>{c.numberOfClassrooms}</td></tr>)}
         </tbody>
       </table>
-      <form className="card form-card" onSubmit={saveSection}>
-        <h3>{editingSectionId ? "Edit section" : "New section"}</h3>
-        <select required value={section.classId} onChange={(e) => setSection({ ...section, classId: e.target.value })}>
-          <option value="">Class</option>
-          {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select required value={section.academicYearId} onChange={(e) => setSection({ ...section, academicYearId: e.target.value })}>
-          <option value="">Year</option>
-          {years.filter((y) => y.status !== "ARCHIVED").map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
-        </select>
-        <select value={section.name} onChange={(e) => setSection({ ...section, name: e.target.value })}>
-          {sectionNames.map((name) => <option key={name} value={name}>{name}</option>)}
-        </select>
-        <select value={section.classTeacherStaffId} onChange={(e) => setSection({ ...section, classTeacherStaffId: e.target.value })}>
-          <option value="">Class teacher (optional)</option>
-          {staff.map((s) => <option key={s.id} value={s.id}>{s.fullName}</option>)}
-        </select>
-        <select value={section.status} onChange={(e) => setSection({ ...section, status: e.target.value })}>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
-        {sectionLimitReached && (
-          <p className="error">
-            Alert: {selectedClass.name} already has {selectedYearSectionCount} section(s) for this academic year,
-            but only {selectedClass.numberOfClassrooms} classroom(s) are available.
-          </p>
-        )}
-        <button disabled={sectionLimitReached}>{editingSectionId ? "Save changes" : "Create section"}</button>
-        {editingSectionId && <button type="button" onClick={cancelEdit}>Cancel</button>}
-      </form>
+      <ActionModal open={showSectionForm} title={editingSectionId ? "Edit section" : "Create section"} onClose={cancelEdit}>
+        <form className="card form-card" onSubmit={saveSection}>
+          <select required value={section.classId} onChange={(e) => setSection({ ...section, classId: e.target.value })}>
+            <option value="">Class</option>
+            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select required value={section.academicYearId} onChange={(e) => setSection({ ...section, academicYearId: e.target.value })}>
+            <option value="">Year</option>
+            {years.filter((y) => y.status !== "ARCHIVED").map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+          </select>
+          <select value={section.name} onChange={(e) => setSection({ ...section, name: e.target.value })}>
+            {sectionNames.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+          <select value={section.classTeacherStaffId} onChange={(e) => setSection({ ...section, classTeacherStaffId: e.target.value })}>
+            <option value="">Class teacher (optional)</option>
+            {staff.map((s) => <option key={s.id} value={s.id}>{s.fullName}</option>)}
+          </select>
+          <select value={section.status} onChange={(e) => setSection({ ...section, status: e.target.value })}>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+          {sectionLimitReached && (
+            <p className="error">
+              Alert: {selectedClass.name} already has {selectedYearSectionCount} section(s) for this academic year,
+              but only {selectedClass.numberOfClassrooms} classroom(s) are available.
+            </p>
+          )}
+          <button disabled={sectionLimitReached}>{editingSectionId ? "Save changes" : "Create section"}</button>
+          <button type="button" className="secondary" onClick={cancelEdit}>Cancel</button>
+        </form>
+      </ActionModal>
       {selectedClassDetails && (
         <div className="card">
           <h3>Class Details</h3>

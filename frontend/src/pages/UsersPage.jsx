@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PasswordField from "../components/PasswordField.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
@@ -17,6 +18,7 @@ export default function UsersPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   async function load() {
     try {
@@ -30,6 +32,13 @@ export default function UsersPage() {
   }
 
   useEffect(() => { load(); }, []);
+
+  function openCreate() {
+    setSelectedId(null);
+    setMessage("");
+    setForm(emptyForm);
+    setShowForm(true);
+  }
 
   function editUser(user) {
     setSelectedId(user.id);
@@ -47,6 +56,13 @@ export default function UsersPage() {
         scopeId: scope.scopeId
       }))
     });
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setSelectedId(null);
+    setForm(emptyForm);
   }
 
   function toggleRole(id) {
@@ -79,8 +95,7 @@ export default function UsersPage() {
       };
       await api(selectedId ? `/api/users/${selectedId}` : "/api/users", selectedId ? "PUT" : "POST", payload);
       setMessage(selectedId ? "User updated." : "User created.");
-      setSelectedId(null);
-      setForm(emptyForm);
+      closeForm();
       await load();
     } catch (err) {
       setError(err.message);
@@ -101,60 +116,60 @@ export default function UsersPage() {
 
   return (
     <div>
-      <PageHeader title="Users" description="Manage administrator accounts, roles, access scopes, and status." />
+      <PageHeader title="Users" description="Manage administrator accounts, roles, access scopes, and status." actions={<button type="button" onClick={openCreate}>Add User</button>} />
       {error && <p className="error">{error}</p>}
       {message && <p className="ok">{message}</p>}
-      <form className="card form-card" onSubmit={save}>
-        <h3>{selectedId ? "Edit user" : "Create user"}</h3>
-        <input required placeholder="Username" value={form.username}
-          onChange={(e) => setForm({ ...form, username: e.target.value })} />
-        <input required type="email" placeholder="Email" value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <PasswordField placeholder={selectedId ? "Temporary password (optional)" : "Temporary password"}
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        <input required placeholder="Full name" value={form.fullName}
-          onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
-        <input placeholder="Phone" value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
-        <strong>Assigned roles</strong>
-        <div className="chips">
-          {roles.map((role) => (
-            <label key={role.id}>
-              <input type="checkbox" checked={form.roleIds.includes(role.id)}
-                onChange={() => toggleRole(role.id)} /> {role.name}
-            </label>
-          ))}
-        </div>
-        <strong>Assigned scope</strong>
-        {form.scopes.map((scope, index) => (
-          <div className="row" key={`${scope.scopeType}-${index}`}>
-            <select value={scope.scopeType} onChange={(e) => updateScope(index, "scopeType", e.target.value)}>
-              {["SCHOOL", "CAMPUS", "CLASS", "SECTION", "SUBJECT", "STUDENT"].map((type) =>
-                <option key={type} value={type}>{type}</option>)}
-            </select>
-            <input required type="number" min="1" placeholder="Target ID" value={scope.scopeId}
-              onChange={(e) => updateScope(index, "scopeId", e.target.value)} />
-            <button type="button" className="secondary"
-              onClick={() => setForm({ ...form, scopes: form.scopes.filter((_, i) => i !== index) })}>
-              Remove
-            </button>
+      <ActionModal open={showForm} title={selectedId ? "Edit user" : "Create user"} onClose={closeForm}>
+        <form className="card form-card" onSubmit={save}>
+          <input required placeholder="Username" value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          <input required type="email" placeholder="Email" value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <PasswordField placeholder={selectedId ? "Temporary password (optional)" : "Temporary password"}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <input required placeholder="Full name" value={form.fullName}
+            onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+          <input placeholder="Phone" value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+          <strong>Assigned roles</strong>
+          <div className="chips">
+            {roles.map((role) => (
+              <label key={role.id}>
+                <input type="checkbox" checked={form.roleIds.includes(role.id)}
+                  onChange={() => toggleRole(role.id)} /> {role.name}
+              </label>
+            ))}
           </div>
-        ))}
-        <button type="button" className="secondary"
-          onClick={() => setForm({ ...form, scopes: [...form.scopes, { scopeType: "SCHOOL", scopeId: "" }] })}>
-          Add scope
-        </button>
-        <div className="row">
-          <button>{selectedId ? "Save changes" : "Create user"}</button>
-          {selectedId && <button type="button" className="secondary"
-            onClick={() => { setSelectedId(null); setForm(emptyForm); }}>Cancel</button>}
-        </div>
-      </form>
+          <strong>Assigned scope</strong>
+          {form.scopes.map((scope, index) => (
+            <div className="row" key={`${scope.scopeType}-${index}`}>
+              <select value={scope.scopeType} onChange={(e) => updateScope(index, "scopeType", e.target.value)}>
+                {["SCHOOL", "CAMPUS", "CLASS", "SECTION", "SUBJECT", "STUDENT"].map((type) =>
+                  <option key={type} value={type}>{type}</option>)}
+              </select>
+              <input required type="number" min="1" placeholder="Target ID" value={scope.scopeId}
+                onChange={(e) => updateScope(index, "scopeId", e.target.value)} />
+              <button type="button" className="secondary"
+                onClick={() => setForm({ ...form, scopes: form.scopes.filter((_, i) => i !== index) })}>
+                Remove
+              </button>
+            </div>
+          ))}
+          <button type="button" className="secondary"
+            onClick={() => setForm({ ...form, scopes: [...form.scopes, { scopeType: "SCHOOL", scopeId: "" }] })}>
+            Add scope
+          </button>
+          <div className="row">
+            <button>{selectedId ? "Save changes" : "Create user"}</button>
+            {selectedId && <button type="button" className="secondary" onClick={closeForm}>Cancel</button>}
+          </div>
+        </form>
+      </ActionModal>
       <TableWrap>
       <table>
         <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Scope</th><th>Status</th><th>Actions</th></tr></thead>
@@ -167,7 +182,7 @@ export default function UsersPage() {
               <td>{(user.scopes || []).map((scope) => `${scope.scopeType}:${scope.scopeId}`).join(", ") || "—"}</td>
               <td><StatusBadge value={user.status} /></td>
               <td>
-                <button className="secondary" onClick={() => editUser(user)}>View / edit</button>{" "}
+                <button className="secondary" onClick={() => editUser(user)}>Edit</button>{" "}
                 <button onClick={() => toggleStatus(user)}>
                   {user.status === "ACTIVE" ? "Deactivate" : "Activate"}
                 </button>

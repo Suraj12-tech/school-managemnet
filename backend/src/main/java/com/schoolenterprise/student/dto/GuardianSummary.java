@@ -1,5 +1,7 @@
 package com.schoolenterprise.student.dto;
 
+import java.util.List;
+
 public record GuardianSummary(
         Long id,
         String fullName,
@@ -7,6 +9,7 @@ public record GuardianSummary(
         String phone,
         String email,
         long linkedStudentCount,
-        String status
+        String status,
+        List<LinkedStudentResponse> students
 ) {
 }

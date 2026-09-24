@@ -116,7 +116,11 @@ public class StudentService {
         }
         return guardians.stream()
                 .map(g -> new GuardianSummary(g.getId(), g.getFullName(), g.getRelationType(), g.getPhone(),
-                        g.getEmail(), linkedStudentCount(g.getId()), g.getStatus()))
+                        g.getEmail(), linkedStudentCount(g.getId()), g.getStatus(),
+                        studentGuardianRepository.findByGuardianId(g.getId()).stream()
+                                .map(this::linkedStudent)
+                                .filter(java.util.Objects::nonNull)
+                                .toList()))
                 .toList();
     }
 

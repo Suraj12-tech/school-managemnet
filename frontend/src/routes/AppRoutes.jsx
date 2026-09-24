@@ -12,6 +12,7 @@ import UsersPage from "../pages/UsersPage.jsx";
 import RolesPage from "../pages/RolesPage.jsx";
 import StudentsPage from "../pages/StudentsPage.jsx";
 import StudentProfilePage from "../pages/StudentProfilePage.jsx";
+import StudentPromotionPage from "../pages/StudentPromotionPage.jsx";
 import GuardiansPage from "../pages/GuardiansPage.jsx";
 import StaffPage from "../pages/StaffPage.jsx";
 import AssignmentsPage from "../pages/AssignmentsPage.jsx";
@@ -45,6 +46,7 @@ export default function AppRoutes() {
         <Route path="roles" element={<RolesPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="students/:id" element={<StudentProfilePage />} />
+        <Route path="student-promotion" element={<StudentPromotionPage />} />
         <Route path="guardians" element={<GuardiansPage />} />
         <Route path="staff" element={<StaffPage />} />
         <Route path="assignments" element={<AssignmentsPage />} />

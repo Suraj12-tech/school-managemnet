@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TableWrap from "../components/TableWrap.jsx";
@@ -14,6 +15,7 @@ export default function PayrollPage() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [showForm, setShowForm] = useState(false);
 
   async function load() {
     try { setError(""); setRows(await api("/api/payroll")); setStaff(await api("/api/staff")); }
@@ -30,7 +32,7 @@ export default function PayrollPage() {
         allowances: Number(form.allowances || 0), deductions: Number(form.deductions || 0),
         paymentDate: form.paymentDate || undefined
       });
-      setForm(empty); setEditingId(null); await load();
+      setForm(empty); setEditingId(null); setShowForm(false); await load();
     } catch (err) { setError(err.message); }
   }
   function edit(row) {
@@ -38,6 +40,7 @@ export default function PayrollPage() {
     setForm({ staffId: row.staffId, payPeriod: row.payPeriod, basicSalary: row.basicSalary,
       allowances: row.allowances, deductions: row.deductions, status: row.status,
       paymentDate: row.paymentDate || "", paymentMethod: row.paymentMethod || "", referenceNo: row.referenceNo || "" });
+    setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   async function remove(id) {
@@ -49,11 +52,11 @@ export default function PayrollPage() {
     && (statusFilter === "ALL" || row.status === statusFilter)
   );
   return <div>
-    <PageHeader title="Teacher & staff payroll" description="Manage one payroll record per staff member and pay period." />
+    <PageHeader title="Teacher & staff payroll" description="Manage one payroll record per staff member and pay period." actions={<button type="button" onClick={() => { setEditingId(null); setForm(empty); setShowForm(true); }}>Create Payroll</button>} />
     {error && <p className="error">{error}</p>}
     <div className="card filter-bar"><input placeholder="Search payroll" value={query} onChange={(e) => setQuery(e.target.value)} /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>PENDING</option><option>PAID</option><option>CANCELLED</option></select></div>
+    <ActionModal open={showForm} title={editingId ? "Edit payroll" : "Create payroll"} onClose={() => { setEditingId(null); setForm(empty); setShowForm(false); }}>
     <form className="card form-card" onSubmit={save}>
-      <h3>{editingId ? "Edit payroll" : "Create payroll"}</h3>
       <select required value={form.staffId} onChange={(e) => update("staffId", e.target.value)}>
         <option value="">Staff member</option>{staff.filter((row) => row.status === "ACTIVE").map((row) => <option key={row.id} value={row.id}>{row.fullName} ({row.employeeId})</option>)}
       </select>
@@ -65,8 +68,9 @@ export default function PayrollPage() {
       <input type="date" value={form.paymentDate} onChange={(e) => update("paymentDate", e.target.value)} />
       <input placeholder="Payment method" value={form.paymentMethod} onChange={(e) => update("paymentMethod", e.target.value)} />
       <input placeholder="Reference (optional)" value={form.referenceNo} onChange={(e) => update("referenceNo", e.target.value)} />
-      <div className="row"><button>{editingId ? "Save changes" : "Create payroll"}</button>{editingId && <button type="button" className="secondary" onClick={() => { setEditingId(null); setForm(empty); }}>Cancel</button>}</div>
+      <div className="row"><button>{editingId ? "Save changes" : "Create payroll"}</button><button type="button" className="secondary" onClick={() => { setEditingId(null); setForm(empty); setShowForm(false); }}>Cancel</button></div>
     </form>
+    </ActionModal>
     <TableWrap><table><thead><tr><th>Employee</th><th>Pay period</th><th>Basic</th><th>Allowances</th><th>Deductions</th><th>Net salary</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>{visibleRows.map((row) => <tr key={row.id}><td>{row.staffName || row.employeeId}</td><td>{row.payPeriod}</td><td>{Number(row.basicSalary).toFixed(2)}</td><td>{Number(row.allowances).toFixed(2)}</td><td>{Number(row.deductions).toFixed(2)}</td><td><strong>{Number(row.netSalary).toFixed(2)}</strong></td><td><StatusBadge value={row.status} /></td><td><button type="button" className="secondary" onClick={() => edit(row)}>Edit</button>{" "}<button type="button" onClick={() => remove(row.id)}>Delete</button></td></tr>)}{!visibleRows.length && <tr><td colSpan="8" className="muted">No payroll records found.</td></tr>}</tbody>
     </table></TableWrap>

@@ -343,10 +343,12 @@ a { color: var(--accent); }
   background: rgba(20, 30, 42, .42);
 }
 .modal-card { width: min(100%, 500px); max-height: calc(100vh - 40px); overflow: auto; padding: 22px; border-radius: 14px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.modal-card.wide { width: min(100%, 820px); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; }
 .modal-header h2 { margin: 0; font-size: 20px; }
 .modal-card label { display: block; font-weight: 700; color: var(--side); }
 .modal-card label input { margin-top: 5px; }
+.modal-card .form-card { margin: 0; }
 
 .content {
   flex: 1;
@@ -791,6 +793,30 @@ td button {
   color: var(--accent) !important;
   border-bottom-color: var(--accent) !important;
   background: rgba(31, 122, 140, 0.06) !important;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  border-bottom: 1px solid #e5eaee;
+}
+
+.tabs .tab {
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 10px 14px;
+}
+
+.tabs .tab:hover,
+.tabs .tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(31, 122, 140, 0.06);
 }
 
 /* Calendar View Controls & Grid */

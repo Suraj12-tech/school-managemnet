@@ -12,6 +12,7 @@ const groups = [
     links: [
       { to: "/school", label: "School profile", module: "school", icon: "school" },
       { to: "/years", label: "Academic year & terms", module: "school", icon: "calendar" },
+      { to: "/student-promotion", label: "Student promotion", module: "students", icon: "student" },
       { to: "/classes", label: "Classes & sections", module: "classes", icon: "classes" },
       { to: "/subjects", label: "Departments & subjects", module: "subjects", icon: "book" }
     ]

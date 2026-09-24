@@ -19,6 +19,7 @@ export default function StudentProfilePage() {
   const [guardianId, setGuardianId] = useState("");
   const [guardianLink, setGuardianLink] = useState({ relationshipType: "FATHER", primaryGuardian: false, emergencyContact: false });
   const [doc, setDoc] = useState({ documentType: "BIRTH_CERTIFICATE", fileName: "" });
+  const [activeTab, setActiveTab] = useState("overview");
 
   async function load() {
     setStudent(await api("/api/students/" + id));
@@ -81,7 +82,13 @@ export default function StudentProfilePage() {
     <div>
       <PageHeader title={`Student profile — ${student.admissionNumber}`} description="Update the student record, enrollment, guardians, and documents." />
       {error && <p className="error">{error}</p>}
+      <div className="tabs" role="tablist">
+        {[["overview", "Overview"], ["academic", "Academic"], ["guardians", "Guardians"], ["documents", "Documents"]].map(([value, label]) => (
+          <button key={value} type="button" className={activeTab === value ? "tab active" : "tab"} onClick={() => setActiveTab(value)}>{label}</button>
+        ))}
+      </div>
       <div className="profile-grid">
+      {activeTab === "overview" && <>
       <div className="card form-card">
         <h3>Student record</h3>
         <input value={student.admissionNumber} onChange={(e) => setStudent({ ...student, admissionNumber: e.target.value })} />
@@ -150,11 +157,35 @@ export default function StudentProfilePage() {
         <button onClick={addDoc}>Add</button>
         <ul>{docs.map((d) => <li key={d.id}>{d.documentType}: {d.fileName}</li>)}</ul>
       </div>
-      </div>
-      <div className="card">
+      </>}
+      {activeTab === "academic" && <div className="card">
         <h3>Academic-year history</h3>
         <ul className="list">{history.map((h) => <li key={h.id}>Year {h.academicYearId} class {h.classId} — {h.resultStatus}</li>)}</ul>
         {history.length === 0 && <p className="muted">No academic-year history yet.</p>}
+        <h3>Enrollments</h3>
+        <ul className="list">{enrollments.map((enrollment) => <li key={enrollment.id}>Academic year {enrollment.academicYearId} · Section {enrollment.sectionId} · {enrollment.status}</li>)}</ul>
+      </div>}
+      {activeTab === "guardians" && <div className="card form-card">
+        <h3>Link guardian</h3>
+        <select value={guardianId} onChange={(e) => setGuardianId(e.target.value)}>
+          <option value="">Guardian</option>
+          {guardians.map((g) => <option key={g.id} value={g.id}>{g.fullName}</option>)}
+        </select>
+        <select value={guardianLink.relationshipType} onChange={(e) => setGuardianLink({ ...guardianLink, relationshipType: e.target.value })}>
+          <option>FATHER</option><option>MOTHER</option><option>LEGAL_GUARDIAN</option><option>OTHER</option>
+        </select>
+        <label><input type="checkbox" checked={guardianLink.primaryGuardian} onChange={(e) => setGuardianLink({ ...guardianLink, primaryGuardian: e.target.checked })} /> Primary guardian</label>
+        <label><input type="checkbox" checked={guardianLink.emergencyContact} onChange={(e) => setGuardianLink({ ...guardianLink, emergencyContact: e.target.checked })} /> Emergency contact</label>
+        <button onClick={linkGuardian}>Link</button>
+        <ul>{links.map((l) => <li key={l.guardianId}>Guardian #{l.guardianId} — {l.relationshipType} {l.primaryGuardian ? "(primary)" : ""} {l.emergencyContact ? "(emergency)" : ""} <button className="secondary" onClick={() => unlinkGuardian(l)}>Remove</button></li>)}</ul>
+      </div>}
+      {activeTab === "documents" && <div className="card form-card">
+        <h3>Document metadata</h3>
+        <input placeholder="Type" value={doc.documentType} onChange={(e) => setDoc({ ...doc, documentType: e.target.value })} />
+        <input placeholder="File name" value={doc.fileName} onChange={(e) => setDoc({ ...doc, fileName: e.target.value })} />
+        <button onClick={addDoc}>Add</button>
+        <ul>{docs.map((d) => <li key={d.id}>{d.documentType}: {d.fileName}</li>)}</ul>
+      </div>}
       </div>
     </div>
   );

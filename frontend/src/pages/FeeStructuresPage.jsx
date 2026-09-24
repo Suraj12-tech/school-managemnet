@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TableWrap from "../components/TableWrap.jsx";
@@ -14,6 +15,7 @@ export default function FeeStructuresPage() {
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -39,6 +41,27 @@ export default function FeeStructuresPage() {
     return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   }
 
+  function openForm(row) {
+    if (row) {
+      setEditing(row);
+      setForm({
+        name: row.name, category: row.category, academicYearId: String(row.academicYearId),
+        classId: String(row.classId), status: row.status || "ACTIVE",
+        items: (row.items || []).map((item) => ({ feeHeadId: String(item.feeHeadId), amount: item.amount }))
+      });
+    } else {
+      setEditing(null);
+      setForm(emptyForm);
+    }
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditing(null);
+    setForm(emptyForm);
+  }
+
   async function save(e) {
     e.preventDefault();
     setError("");
@@ -51,8 +74,7 @@ export default function FeeStructuresPage() {
           classId: Number(form.classId),
           items: form.items.map((item) => ({ feeHeadId: Number(item.feeHeadId), amount: Number(item.amount) }))
         });
-      setForm(emptyForm);
-      setEditing(null);
+      closeForm();
       await load();
     } catch (err) { setError(err.message || "Unable to save fee structure"); }
   }
@@ -63,13 +85,8 @@ export default function FeeStructuresPage() {
   }
 
   function edit(row) {
-    setEditing(row);
-    setForm({
-      name: row.name, category: row.category, academicYearId: String(row.academicYearId),
-      classId: String(row.classId), status: row.status || "ACTIVE",
-      items: (row.items || []).map((item) => ({ feeHeadId: String(item.feeHeadId), amount: item.amount }))
-    });
     setViewing(null);
+    openForm(row);
   }
 
   async function changeStatus(row) {
@@ -92,41 +109,43 @@ export default function FeeStructuresPage() {
 
   return (
     <div>
-      <PageHeader title="Fee structures" description="Combine fee heads into charges for a class and academic year." />
-      <form className="card form-card" onSubmit={save}>
-        <input required placeholder="Structure name" value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-          <option>GENERAL</option><option>STAFF_WARD</option><option>SCHOLARSHIP</option>
-        </select>
-        <select required value={form.academicYearId} onChange={(e) => setForm({ ...form, academicYearId: e.target.value })}>
-          <option value="">Academic year</option>
-          {years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
-        </select>
-        <select required value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
-          <option value="">Class</option>
-          {classes.map((schoolClass) => <option key={schoolClass.id} value={schoolClass.id}>{schoolClass.name}</option>)}
-        </select>
-        <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-          <option>ACTIVE</option><option>INACTIVE</option>
-        </select>
-        <h4>Fee items</h4>
-        {form.items.map((item, index) => (
-          <div className="form-row" key={index}>
-            <select required value={item.feeHeadId} onChange={(e) => setItem(index, "feeHeadId", e.target.value)}>
-              <option value="">Fee head</option>
-              {heads.map((head) => <option key={head.id} value={head.id}>{head.name} ({head.code})</option>)}
-            </select>
-            <input required min="0" type="number" step="0.01" placeholder="Amount" value={item.amount}
-              onChange={(e) => setItem(index, "amount", e.target.value)} />
-            <button type="button" onClick={() => setForm({ ...form, items: form.items.filter((_, i) => i !== index) })}>Remove</button>
-          </div>
-        ))}
-        <button type="button" onClick={() => setForm({ ...form, items: [...form.items, { feeHeadId: "", amount: "" }] })}>Add fee head</button>
-        <strong>Total: {total(form.items).toFixed(2)}</strong>
-        <button>{editing ? "Update structure" : "Create structure"}</button>
-        {editing && <button type="button" onClick={() => { setEditing(null); setForm(emptyForm); }}>Cancel</button>}
-      </form>
+      <PageHeader title="Fee structures" description="Combine fee heads into charges for a class and academic year." actions={<button type="button" onClick={() => openForm()}>Add Fee Structure</button>} />
+      <ActionModal open={showForm} title={editing ? "Edit fee structure" : "Create fee structure"} onClose={closeForm} size="lg">
+        <form className="card form-card" onSubmit={save}>
+          <input required placeholder="Structure name" value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+            <option>GENERAL</option><option>STAFF_WARD</option><option>SCHOLARSHIP</option>
+          </select>
+          <select required value={form.academicYearId} onChange={(e) => setForm({ ...form, academicYearId: e.target.value })}>
+            <option value="">Academic year</option>
+            {years.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
+          </select>
+          <select required value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
+            <option value="">Class</option>
+            {classes.map((schoolClass) => <option key={schoolClass.id} value={schoolClass.id}>{schoolClass.name}</option>)}
+          </select>
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            <option>ACTIVE</option><option>INACTIVE</option>
+          </select>
+          <h4>Fee items</h4>
+          {form.items.map((item, index) => (
+            <div className="form-row" key={index}>
+              <select required value={item.feeHeadId} onChange={(e) => setItem(index, "feeHeadId", e.target.value)}>
+                <option value="">Fee head</option>
+                {heads.map((head) => <option key={head.id} value={head.id}>{head.name} ({head.code})</option>)}
+              </select>
+              <input required min="0" type="number" step="0.01" placeholder="Amount" value={item.amount}
+                onChange={(e) => setItem(index, "amount", e.target.value)} />
+              <button type="button" onClick={() => setForm({ ...form, items: form.items.filter((_, i) => i !== index) })}>Remove</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => setForm({ ...form, items: [...form.items, { feeHeadId: "", amount: "" }] })}>Add fee head</button>
+          <strong>Total: {total(form.items).toFixed(2)}</strong>
+          <button>{editing ? "Update structure" : "Create structure"}</button>
+          {editing && <button type="button" className="secondary" onClick={closeForm}>Cancel</button>}
+        </form>
+      </ActionModal>
       <div className="card filter-bar"><input placeholder="Search fee structures" value={query} onChange={(e) => setQuery(e.target.value)} /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>ACTIVE</option><option>INACTIVE</option></select></div>
       {error && <div className="error">{error}</div>}
       <TableWrap>

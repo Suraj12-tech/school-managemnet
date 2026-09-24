@@ -5,6 +5,7 @@ import com.schoolenterprise.common.security.RequirePermission;
 import com.schoolenterprise.student.dto.*;
 import com.schoolenterprise.student.entity.*;
 import com.schoolenterprise.student.service.StudentService;
+import com.schoolenterprise.student.service.PromotionService;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService studentService;
+    private final PromotionService promotionService;
 
     @GetMapping("/students")
     @RequirePermission(module = "students", action = "view")
@@ -111,6 +113,18 @@ public class StudentController {
     @RequirePermission(module = "students", action = "edit")
     public ApiResponse<Enrollment> enroll(@Valid @RequestBody EnrollmentRequest request) {
         return ApiResponse.ok(studentService.enroll(request));
+    }
+
+    @PostMapping("/student-promotions/preview")
+    @RequirePermission(module = "students", action = "edit")
+    public ApiResponse<PromotionPreview> promotionPreview(@Valid @RequestBody PromotionRequest request) {
+        return ApiResponse.ok(promotionService.preview(request));
+    }
+
+    @PostMapping("/student-promotions/confirm")
+    @RequirePermission(module = "students", action = "edit")
+    public ApiResponse<PromotionSummary> confirmPromotion(@Valid @RequestBody PromotionRequest request) {
+        return ApiResponse.ok(promotionService.confirm(request));
     }
 
     @GetMapping("/students/{id}/enrollments")

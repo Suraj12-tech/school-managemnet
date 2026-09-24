@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import { exportCsv } from "../utils/exportCsv.js";
@@ -14,6 +15,8 @@ export default function InvoicesPage() {
   const [pay, setPay] = useState({ invoiceId: "", amount: "", method: "CASH", referenceNo: "" });
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [viewingInvoice, setViewingInvoice] = useState(null);
+  const [showCreateInvoiceForm, setShowCreateInvoiceForm] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -51,6 +54,26 @@ export default function InvoicesPage() {
     && (statusFilter === "ALL" || (statusFilter === "OVERDUE" ? isOverdue(invoice) : invoice.status === statusFilter))
   );
 
+  function openCreateInvoiceForm() {
+    setForm({ studentId: "", feeStructureId: "", dueDate: "" });
+    setShowCreateInvoiceForm(true);
+  }
+
+  function closeCreateInvoiceForm() {
+    setShowCreateInvoiceForm(false);
+    setForm({ studentId: "", feeStructureId: "", dueDate: "" });
+  }
+
+  function openPaymentForm() {
+    setPay({ invoiceId: "", amount: "", method: "CASH", referenceNo: "" });
+    setShowPaymentForm(true);
+  }
+
+  function closePaymentForm() {
+    setShowPaymentForm(false);
+    setPay({ invoiceId: "", amount: "", method: "CASH", referenceNo: "" });
+  }
+
   async function createInvoice(e) {
     e.preventDefault();
     setError("");
@@ -58,7 +81,7 @@ export default function InvoicesPage() {
       await api("/api/invoices", "POST", {
         studentId: Number(form.studentId), feeStructureId: Number(form.feeStructureId), dueDate: form.dueDate
       });
-      setForm({ studentId: "", feeStructureId: "", dueDate: "" });
+      closeCreateInvoiceForm();
       await load();
     } catch (err) { setError(err.message); }
   }
@@ -71,7 +94,7 @@ export default function InvoicesPage() {
         invoiceId: Number(pay.invoiceId), amount: Number(pay.amount),
         method: pay.method, referenceNo: pay.referenceNo
       });
-      setPay({ invoiceId: "", amount: "", method: "CASH", referenceNo: "" });
+      closePaymentForm();
       const loaded = await load();
       const detailed = loaded.receipts.find((item) => item.receiptNumber === receipt.receiptNumber);
       setSelectedReceipt(detailed || receipt);
@@ -87,7 +110,10 @@ export default function InvoicesPage() {
 
   return (
     <div>
-      <PageHeader title="Invoices, payments & receipts" description="Create invoices, record payments, and review issued receipts." />
+      <PageHeader title="Invoices, payments & receipts" description="Create invoices, record payments, and review issued receipts." actions={<>
+        <button type="button" onClick={openCreateInvoiceForm}>Create Invoice</button>
+        <button type="button" className="secondary" onClick={openPaymentForm}>Record Payment</button>
+      </>} />
       {error && <p className="error">{error}</p>}
       {statusFilter === "OVERDUE" && <div className="card overdue-filter-banner"><strong>Showing overdue invoices</strong><span>Unpaid or partially paid invoices past their due date.</span></div>}
       <div className="card filter-bar">
@@ -95,20 +121,22 @@ export default function InvoicesPage() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option value="OVERDUE">OVERDUE</option><option>UNPAID</option><option>PARTIAL</option><option>PAID</option></select>
         <button type="button" className="secondary" onClick={() => exportCsv("invoices.csv", visibleInvoices.map((invoice) => ({ invoice: invoice.invoiceNumber, student: invoice.student, total: invoice.totalAmount, paid: invoice.paidAmount, outstanding: invoice.outstanding, status: invoice.status })))}>Export</button>
       </div>
-      <form className="card form-card" onSubmit={createInvoice}>
-        <h3>Create invoice from fee structure</h3>
-        <select required value={form.studentId} onChange={(e) => setForm({ ...form, studentId: e.target.value })}>
-          <option value="">Student</option>
-          {students.map((student) => <option key={student.id} value={student.id}>{student.admissionNumber} {student.firstName} {student.lastName}</option>)}
-        </select>
-        <select required value={form.feeStructureId} onChange={(e) => setForm({ ...form, feeStructureId: e.target.value })}>
-          <option value="">Fee structure</option>
-          {structures.filter((structure) => structure.status === "ACTIVE").map((structure) =>
-            <option key={structure.id} value={structure.id}>{structure.name} ({structure.totalAmount})</option>)}
-        </select>
-        <input required type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
-        <button>Create invoice</button>
-      </form>
+      <ActionModal open={showCreateInvoiceForm} title="Create invoice from fee structure" onClose={closeCreateInvoiceForm}>
+        <form className="card form-card" onSubmit={createInvoice}>
+          <select required value={form.studentId} onChange={(e) => setForm({ ...form, studentId: e.target.value })}>
+            <option value="">Student</option>
+            {students.map((student) => <option key={student.id} value={student.id}>{student.admissionNumber} {student.firstName} {student.lastName}</option>)}
+          </select>
+          <select required value={form.feeStructureId} onChange={(e) => setForm({ ...form, feeStructureId: e.target.value })}>
+            <option value="">Fee structure</option>
+            {structures.filter((structure) => structure.status === "ACTIVE").map((structure) =>
+              <option key={structure.id} value={structure.id}>{structure.name} ({structure.totalAmount})</option>)}
+          </select>
+          <input required type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+          <button>Create invoice</button>
+          <button type="button" className="secondary" onClick={closeCreateInvoiceForm}>Cancel</button>
+        </form>
+      </ActionModal>
 
       <table>
         <thead><tr><th>Invoice No</th><th>Student</th><th>Class/Section</th><th>Due Date</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Actions</th></tr></thead>
@@ -131,22 +159,24 @@ export default function InvoicesPage() {
         <button type="button" onClick={() => setViewingInvoice(null)}>Close</button>
       </div>}
 
-      <form className="card form-card" onSubmit={payInvoice}>
-        <h3>Record payment</h3>
-        <select required value={pay.invoiceId} onChange={(e) => setPay({ ...pay, invoiceId: e.target.value, amount: "" })}>
-          <option value="">Unpaid or partial invoice</option>
-          {payableInvoices.map((invoice) =>
-            <option key={invoice.id} value={invoice.id}>{invoice.invoiceNumber} - {invoice.student} (Outstanding: {invoice.outstanding})</option>)}
-        </select>
-        {selectedInvoice && <p>Total: {selectedInvoice.totalAmount} | Already paid: {selectedInvoice.paidAmount} | Outstanding: {selectedInvoice.outstanding}</p>}
-        <input required min="0.01" max={selectedInvoice?.outstanding || undefined} step="0.01" type="number"
-          placeholder="Amount" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
-        <select value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })}>
-          <option>CASH</option><option>UPI</option><option>BANK</option>
-        </select>
-        <input placeholder="Reference number" value={pay.referenceNo} onChange={(e) => setPay({ ...pay, referenceNo: e.target.value })} />
-        <button disabled={!selectedInvoice}>Pay & generate receipt</button>
-      </form>
+      <ActionModal open={showPaymentForm} title="Record payment" onClose={closePaymentForm}>
+        <form className="card form-card" onSubmit={payInvoice}>
+          <select required value={pay.invoiceId} onChange={(e) => setPay({ ...pay, invoiceId: e.target.value, amount: "" })}>
+            <option value="">Unpaid or partial invoice</option>
+            {payableInvoices.map((invoice) =>
+              <option key={invoice.id} value={invoice.id}>{invoice.invoiceNumber} - {invoice.student} (Outstanding: {invoice.outstanding})</option>)}
+          </select>
+          {selectedInvoice && <p>Total: {selectedInvoice.totalAmount} | Already paid: {selectedInvoice.paidAmount} | Outstanding: {selectedInvoice.outstanding}</p>}
+          <input required min="0.01" max={selectedInvoice?.outstanding || undefined} step="0.01" type="number"
+            placeholder="Amount" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
+          <select value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })}>
+            <option>CASH</option><option>UPI</option><option>BANK</option>
+          </select>
+          <input placeholder="Reference number" value={pay.referenceNo} onChange={(e) => setPay({ ...pay, referenceNo: e.target.value })} />
+          <button disabled={!selectedInvoice}>Pay & generate receipt</button>
+          <button type="button" className="secondary" onClick={closePaymentForm}>Cancel</button>
+        </form>
+      </ActionModal>
 
       <h3>Receipts</h3>
       <table>

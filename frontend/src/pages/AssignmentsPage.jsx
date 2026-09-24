@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TableWrap from "../components/TableWrap.jsx";
@@ -20,6 +21,7 @@ export default function AssignmentsPage() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   async function load() {
     try {
@@ -54,6 +56,7 @@ export default function AssignmentsPage() {
         editingId ? "PUT" : "POST", payload);
       setForm(emptyForm);
       setEditingId(null);
+      setShowForm(false);
       await load();
     } catch (err) { setError(err.message); }
   }
@@ -66,6 +69,7 @@ export default function AssignmentsPage() {
       academicYearId: String(row.academicYearId), assignmentType: row.assignmentType || "SUBJECT_TEACHER",
       status: row.status || "ACTIVE"
     });
+    setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -94,12 +98,12 @@ export default function AssignmentsPage() {
 
   return (
     <div>
-      <PageHeader title="Teacher assignments" description="Assign subject and class teachers for each academic year." />
+      <PageHeader title="Teacher assignments" description="Assign subject and class teachers for each academic year." actions={<button type="button" onClick={() => { setEditingId(null); setForm(emptyForm); setShowForm(true); }}>Assign Teacher</button>} />
       <p className="muted">Subject teachers require a subject; class teachers are assigned to one section.</p>
       {error && <p className="error">{error}</p>}
       <div className="card filter-bar"><input placeholder="Search assignments" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
+      <ActionModal open={showForm} title={editingId ? "Edit assignment" : "Assign teacher"} onClose={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); }}>
       <form className="card form-card" onSubmit={save}>
-        <h3>{editingId ? "Edit assignment" : "New assignment"}</h3>
         <select required value={form.assignmentType}
           onChange={(e) => setForm({ ...form, assignmentType: e.target.value, subjectId: "" })}>
           <option value="SUBJECT_TEACHER">Subject Teacher</option>
@@ -139,10 +143,10 @@ export default function AssignmentsPage() {
         </select>
         <div className="row">
           <button>{editingId ? "Save changes" : "Assign teacher"}</button>
-          {editingId && <button type="button" className="secondary"
-            onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}
+          <button type="button" className="secondary" onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); }}>Cancel</button>
         </div>
       </form>
+      </ActionModal>
       <TableWrap>
       <table>
         <thead><tr><th>Teacher</th><th>Subject</th><th>Class</th><th>Section</th><th>Academic Year</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>

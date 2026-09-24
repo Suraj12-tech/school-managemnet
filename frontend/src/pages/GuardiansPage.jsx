@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
+import BulkImportModal from "../components/BulkImportModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TableWrap from "../components/TableWrap.jsx";
@@ -15,6 +17,9 @@ export default function GuardiansPage() {
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   async function load() {
     try { setError(""); setRows(await api("/api/guardians")); }
@@ -22,14 +27,25 @@ export default function GuardiansPage() {
   }
   useEffect(() => { load(); }, []);
 
+  function openCreate() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
   async function save(e) {
     e.preventDefault();
     try {
       setError("");
-      if (selected) await api("/api/guardians/" + selected.id, "PUT", form);
+      if (editingId) await api("/api/guardians/" + editingId, "PUT", form);
       else await api("/api/guardians", "POST", form);
-      setForm(emptyForm);
-      setSelected(null);
+      closeForm();
       load();
     } catch (err) { setError(err.message); }
   }
@@ -40,11 +56,12 @@ export default function GuardiansPage() {
   }
 
   async function edit(row) {
-    setSelected(row);
+    setEditingId(row.id);
     try {
       const details = await api("/api/guardians/" + row.id);
       setSelected(details);
       setForm({ ...emptyForm, ...details });
+      setShowForm(true);
     } catch (err) { setError(err.message); }
   }
 
@@ -56,37 +73,69 @@ export default function GuardiansPage() {
       if (selected?.id === row.id) inspect(row.id);
     } catch (err) { setError(err.message); }
   }
+  const guardianImportKeys = new Set(rows.map((row) => `${row.fullName || ""}|${row.phone || ""}`.toLowerCase()));
+  function mapImportedGuardian(row) {
+    return {
+      fullName: row.fullName?.trim(),
+      relationType: row.relationType?.trim() || "OTHER",
+      phone: row.phone?.trim(),
+      email: row.email?.trim(),
+      address: row.address?.trim(),
+      occupation: row.occupation?.trim() || undefined,
+      emergencyContact: String(row.emergencyContact || "false").toLowerCase() === "true",
+      status: row.status?.trim() || "ACTIVE"
+    };
+  }
   const visibleRows = rows.filter((row) =>
-    `${row.fullName} ${row.email} ${row.phone}`.toLowerCase().includes(query.toLowerCase())
+    `${row.fullName} ${row.email} ${row.phone} ${row.relationType} ${(row.students || []).map((student) => `${student.studentName} ${student.admissionNumber} ${student.relationshipType}`).join(" ")}`
+      .toLowerCase().includes(query.toLowerCase())
   );
 
   return (
     <div>
-      <PageHeader title="Guardians" description="Manage guardian contact details and linked students." />
+      <PageHeader title="Guardians" description="Manage guardian contact details and linked students." actions={<>
+        <button type="button" onClick={openCreate}>Add Guardian</button>
+        <button type="button" className="secondary" onClick={() => setShowImport(true)}>Import CSV</button>
+      </>} />
       {error && <p className="error">{error}</p>}
       <div className="card filter-bar"><input placeholder="Search guardians" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
-      <form className="card form-card" onSubmit={save}>
-        <input required placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
-        <select value={form.relationType} onChange={(e) => setForm({ ...form, relationType: e.target.value })}>
-          <option>FATHER</option><option>MOTHER</option><option>LEGAL_GUARDIAN</option><option>OTHER</option>
-        </select>
-        <input required placeholder="Mobile number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <input required placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-        <input placeholder="Occupation (optional)" value={form.occupation || ""} onChange={(e) => setForm({ ...form, occupation: e.target.value })} />
-        <label><input type="checkbox" checked={form.emergencyContact} onChange={(e) => setForm({ ...form, emergencyContact: e.target.checked })} /> Emergency contact</label>
-        <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-          <option>ACTIVE</option><option>INACTIVE</option>
-        </select>
-        <div className="row"><button>{selected?.id ? "Update guardian" : "Save guardian"}</button>
-          {selected && <button type="button" className="secondary" onClick={() => { setSelected(null); setForm(emptyForm); }}>Cancel</button>}</div>
-      </form>
+      <ActionModal open={showForm} title={editingId ? "Edit guardian" : "Create guardian"} onClose={closeForm}>
+        <form className="card form-card" onSubmit={save}>
+          <input required placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+          <select value={form.relationType} onChange={(e) => setForm({ ...form, relationType: e.target.value })}>
+            <option>FATHER</option><option>MOTHER</option><option>LEGAL_GUARDIAN</option><option>OTHER</option>
+          </select>
+          <input required placeholder="Mobile number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input required placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          <input placeholder="Occupation (optional)" value={form.occupation || ""} onChange={(e) => setForm({ ...form, occupation: e.target.value })} />
+          <label><input type="checkbox" checked={form.emergencyContact} onChange={(e) => setForm({ ...form, emergencyContact: e.target.checked })} /> Emergency contact</label>
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            <option>ACTIVE</option><option>INACTIVE</option>
+          </select>
+          <div className="row"><button>{editingId ? "Update guardian" : "Save guardian"}</button>
+            {editingId && <button type="button" className="secondary" onClick={closeForm}>Cancel</button>}</div>
+        </form>
+      </ActionModal>
+      <BulkImportModal
+        open={showImport}
+        onClose={() => { setShowImport(false); load(); }}
+        title="Import guardians"
+        columns={["fullName", "relationType", "phone", "email", "address", "occupation", "emergencyContact", "status"]}
+        requiredColumns={["fullName", "phone", "email", "address"]}
+        existingKeys={guardianImportKeys}
+        keyOf={(row) => `${row.fullName || ""}|${row.phone || ""}`.toLowerCase()}
+        mapRow={mapImportedGuardian}
+        createRow={(payload) => api("/api/guardians", "POST", payload)}
+      />
       <TableWrap>
       <table>
-        <thead><tr><th>Name</th><th>Relation</th><th>Phone</th><th>Email</th><th>Students</th><th>Status</th><th /></tr></thead>
+        <thead><tr><th>Name</th><th>Relation</th><th>Phone</th><th>Email</th><th>Associated students</th><th>Status</th><th /></tr></thead>
         <tbody>{visibleRows.map((g) => <tr key={g.id}>
           <td><button className="linkish" onClick={() => inspect(g.id)}>{g.fullName}</button></td>
-          <td>{g.relationType}</td><td>{g.phone}</td><td>{g.email}</td><td>{g.linkedStudentCount}</td><td><StatusBadge value={g.status} /></td>
+          <td>{g.relationType}</td><td>{g.phone}</td><td>{g.email}</td>
+          <td>{g.students?.length ? g.students.map((student) => `${student.studentName} (${student.admissionNumber})`).join(", ") : "None"}</td>
+          <td><StatusBadge value={g.status} /></td>
           <td><button className="secondary" onClick={() => edit(g)}>Edit</button> <button onClick={() => toggleStatus(g)}>{g.status === "ACTIVE" ? "Deactivate" : "Activate"}</button></td>
         </tr>)}{!visibleRows.length && <tr><td colSpan="7" className="muted">No guardians found.</td></tr>}</tbody>
       </table>

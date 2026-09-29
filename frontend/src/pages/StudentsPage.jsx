@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
+import BulkImportModal from "../components/BulkImportModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TableWrap from "../components/TableWrap.jsx";
@@ -21,6 +23,8 @@ export default function StudentsPage() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
@@ -39,6 +43,18 @@ export default function StudentsPage() {
   }
   useEffect(() => { load(); }, []);
 
+  function openCreate() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
   async function save(event) {
     event.preventDefault();
     try {
@@ -53,8 +69,7 @@ export default function StudentsPage() {
         sectionId: form.sectionId ? Number(form.sectionId) : undefined
       };
       await api(editingId ? `/api/students/${editingId}` : "/api/students", editingId ? "PUT" : "POST", payload);
-      setForm(emptyForm);
-      setEditingId(null);
+      closeForm();
       await load();
     } catch (err) { setError(err.message); }
   }
@@ -67,7 +82,7 @@ export default function StudentsPage() {
       gender: student.gender || "", email: student.email || "", phone: student.phone || "",
       academicYearId: "", classId: "", sectionId: "", status: student.status || "ACTIVE"
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setShowForm(true);
   }
 
   async function toggleStatus(student) {
@@ -77,6 +92,29 @@ export default function StudentsPage() {
       });
       await load();
     } catch (err) { setError(err.message); }
+  }
+
+  const studentImportKeys = new Set(students.map((student) => String(student.admissionNumber || "").trim().toLowerCase()));
+  function mapImportedStudent(row) {
+    const payload = {
+      admissionNumber: row.admissionNumber?.trim(),
+      firstName: row.firstName?.trim(),
+      lastName: row.lastName?.trim(),
+      dateOfBirth: row.dateOfBirth?.trim() || undefined,
+      gender: row.gender?.trim() || undefined,
+      email: row.email?.trim() || undefined,
+      phone: row.phone?.trim() || undefined,
+      status: row.status?.trim() || "ACTIVE"
+    };
+    const enrollmentFields = ["academicYearId", "classId", "sectionId"];
+    const providedEnrollment = enrollmentFields.filter((field) => row[field]?.trim());
+    if (providedEnrollment.length && providedEnrollment.length !== enrollmentFields.length) {
+      throw new Error("academicYearId, classId, and sectionId must be provided together");
+    }
+    enrollmentFields.forEach((field) => {
+      if (row[field]?.trim()) payload[field] = Number(row[field]);
+    });
+    return payload;
   }
 
   const visibleSections = sections.filter((section) =>
@@ -93,53 +131,67 @@ export default function StudentsPage() {
 
   return (
     <div>
-      <PageHeader title="Students" description="Maintain student records, enrollment, and account status." />
+      <PageHeader title="Students" description="Maintain student records, enrollment, and account status." actions={<>
+        <button type="button" onClick={openCreate}>Add Student</button>
+        <button type="button" className="secondary" onClick={() => setShowImport(true)}>Import CSV</button>
+      </>} />
       {error && <p className="error">{error}</p>}
       <div className="card filter-bar">
         <input aria-label="Search students" placeholder="Search by admission number or name" value={query} onChange={(e) => setQuery(e.target.value)} />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>ACTIVE</option><option>INACTIVE</option></select>
         <button type="button" className="secondary" onClick={() => exportCsv("students.csv", visibleStudents.map((student) => ({ admissionNumber: student.admissionNumber, name: `${student.firstName} ${student.lastName}`, status: student.status })))}>Export</button>
       </div>
-      <form className="card form-card" onSubmit={save}>
-        <h3>{editingId ? "Edit student" : "Create student"}</h3>
-        <input required placeholder="Admission No" value={form.admissionNumber}
-          onChange={(e) => setForm({ ...form, admissionNumber: e.target.value })} />
-        <input required placeholder="First Name" value={form.firstName}
-          onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
-        <input required placeholder="Last Name" value={form.lastName}
-          onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
-        <input type="date" max={today} value={form.dateOfBirth}
-          onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} />
-        <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-          <option value="">Gender</option><option>MALE</option><option>FEMALE</option><option>OTHER</option>
-        </select>
-        <input type="email" placeholder="Email (optional)" value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <input placeholder="Mobile (optional)" value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        {!editingId && <>
-          <select value={form.academicYearId} onChange={(e) => setForm({ ...form, academicYearId: e.target.value, classId: "", sectionId: "" })}>
-            <option value="">Academic Year (optional)</option>
-            {years.filter((year) => year.status !== "ARCHIVED").map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
+      <ActionModal open={showForm} title={editingId ? "Edit student" : "Create student"} onClose={closeForm}>
+        <form className="card form-card" onSubmit={save}>
+          <input required placeholder="Admission No" value={form.admissionNumber}
+            onChange={(e) => setForm({ ...form, admissionNumber: e.target.value })} />
+          <input required placeholder="First Name" value={form.firstName}
+            onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+          <input required placeholder="Last Name" value={form.lastName}
+            onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+          <input type="date" max={today} value={form.dateOfBirth}
+            onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} />
+          <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+            <option value="">Gender</option><option>MALE</option><option>FEMALE</option><option>OTHER</option>
           </select>
-          <select value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value, sectionId: "" })}>
-            <option value="">Class (optional)</option>
-            {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          <input type="email" placeholder="Email (optional)" value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input placeholder="Mobile (optional)" value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          {!editingId && <>
+            <select value={form.academicYearId} onChange={(e) => setForm({ ...form, academicYearId: e.target.value, classId: "", sectionId: "" })}>
+              <option value="">Academic Year (optional)</option>
+              {years.filter((year) => year.status !== "ARCHIVED").map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
+            </select>
+            <select value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value, sectionId: "" })}>
+              <option value="">Class (optional)</option>
+              {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <select value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
+              <option value="">Section (optional)</option>
+              {visibleSections.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </>}
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            <option>ACTIVE</option><option>INACTIVE</option>
           </select>
-          <select value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
-            <option value="">Section (optional)</option>
-            {visibleSections.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-        </>}
-        <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-          <option>ACTIVE</option><option>INACTIVE</option>
-        </select>
-        <div className="row">
-          <button>{editingId ? "Save changes" : "Create student"}</button>
-          {editingId && <button type="button" className="secondary"
-            onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}
-        </div>
-      </form>
+          <div className="row">
+            <button>{editingId ? "Save changes" : "Create student"}</button>
+            {editingId && <button type="button" className="secondary" onClick={closeForm}>Cancel</button>}
+          </div>
+        </form>
+      </ActionModal>
+      <BulkImportModal
+        open={showImport}
+        onClose={() => { setShowImport(false); load(); }}
+        title="Import students"
+        columns={["admissionNumber", "firstName", "lastName", "dateOfBirth", "gender", "email", "phone", "status", "academicYearId", "classId", "sectionId"]}
+        requiredColumns={["admissionNumber", "firstName", "lastName"]}
+        existingKeys={studentImportKeys}
+        keyOf={(row) => row.admissionNumber?.trim().toLowerCase()}
+        mapRow={mapImportedStudent}
+        createRow={(payload) => api("/api/students", "POST", payload)}
+      />
       <TableWrap>
       <table>
         <thead><tr><th>Admission No</th><th>Student Name</th><th>Class</th><th>Section</th><th>Status</th><th>Actions</th></tr></thead>
@@ -152,7 +204,8 @@ export default function StudentsPage() {
               <td>{currentSection ? className(currentSection.classId) : "—"}</td>
               <td>{currentSection?.name || "—"}</td>
               <td><StatusBadge value={student.status} /></td>
-              <td><button type="button" className="secondary" onClick={() => edit(student)}>View / edit</button>{" "}
+              <td><Link to={`/students/${student.id}`}><button type="button" className="secondary">View</button></Link>{" "}
+                <button type="button" className="secondary" onClick={() => edit(student)}>Edit</button>{" "}
                 <button type="button" onClick={() => toggleStatus(student)}>
                   {student.status === "ACTIVE" ? "Deactivate" : "Activate"}
                 </button></td>

@@ -9,6 +9,8 @@ export default defineConfig({
       "/api": "http://localhost:8080",
       "/v3": "http://localhost:8080",
       "/swagger-ui": "http://localhost:8080"
-    }
+    }, allowedHosts: [
+      'figures-sydney-montgomery-mask.trycloudflare.com'
+    ]
   }
 });

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import {
@@ -34,6 +35,7 @@ export default function RolesPage() {
   const [saving, setSaving] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: "", description: "", sensitivity: "NORMAL" });
   const [editingRoleId, setEditingRoleId] = useState(null);
+  const [showRoleForm, setShowRoleForm] = useState(false);
 
   async function load() {
     try {
@@ -105,11 +107,19 @@ export default function RolesPage() {
   function startRoleEdit(role) {
     setEditingRoleId(role.id);
     setRoleForm({ name: role.name || "", description: role.description || "", sensitivity: role.sensitivity || "NORMAL" });
+    setShowRoleForm(true);
+  }
+
+  function openRoleForm() {
+    setEditingRoleId(null);
+    setRoleForm({ name: "", description: "", sensitivity: "NORMAL" });
+    setShowRoleForm(true);
   }
 
   function cancelRoleEdit() {
     setEditingRoleId(null);
     setRoleForm({ name: "", description: "", sensitivity: "NORMAL" });
+    setShowRoleForm(false);
   }
 
   async function saveRole(event) {
@@ -220,6 +230,7 @@ export default function RolesPage() {
       <PageHeader
         title="Roles & permissions"
         description="Manage role-based access permissions and administrative capabilities across all school modules."
+        actions={<button type="button" onClick={openRoleForm}>Add Role</button>}
       />
 
       {error && <p className="error">{error}</p>}
@@ -258,14 +269,15 @@ export default function RolesPage() {
               );
             })}
           </ul>
-          <form className="card form-card" onSubmit={saveRole}>
-            <h3>{editingRoleId ? "Edit role" : "Add role"}</h3>
-            <input required placeholder="Role name" value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} />
-            <input placeholder="Description" value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
-            <select value={roleForm.sensitivity} onChange={(e) => setRoleForm({ ...roleForm, sensitivity: e.target.value })}><option>NORMAL</option><option>FINANCIAL</option><option>HR_RESTRICTED</option></select>
-            <button>{editingRoleId ? "Save role" : "Create role"}</button>
-            {editingRoleId && <button type="button" className="secondary" onClick={cancelRoleEdit}>Cancel</button>}
-          </form>
+          <ActionModal open={showRoleForm} title={editingRoleId ? "Edit role" : "Create role"} onClose={cancelRoleEdit}>
+            <form className="card form-card" onSubmit={saveRole}>
+              <input required placeholder="Role name" value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} />
+              <input placeholder="Description" value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
+              <select value={roleForm.sensitivity} onChange={(e) => setRoleForm({ ...roleForm, sensitivity: e.target.value })}><option>NORMAL</option><option>FINANCIAL</option><option>HR_RESTRICTED</option></select>
+              <button>{editingRoleId ? "Save role" : "Create role"}</button>
+              <button type="button" className="secondary" onClick={cancelRoleEdit}>Cancel</button>
+            </form>
+          </ActionModal>
           {selected && <button type="button" className="secondary" onClick={() => startRoleEdit(selected)}>Edit selected role</button>}
         </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 
@@ -29,6 +30,8 @@ export default function YearsPage() {
   const [selectedTerm, setSelectedTerm] = useState(null);
   const [editingYearId, setEditingYearId] = useState(null);
   const [editingTermId, setEditingTermId] = useState(null);
+  const [showYearForm, setShowYearForm] = useState(false);
+  const [showTermForm, setShowTermForm] = useState(false);
 
   // Calendar State
   const [calendarYearId, setCalendarYearId] = useState("");
@@ -125,6 +128,7 @@ export default function YearsPage() {
         editingYearId ? "PUT" : "POST", payload);
       setYear(emptyYear);
       setEditingYearId(null);
+      setShowYearForm(false);
       setMessage(editingYearId ? "Academic year updated" : "Academic year created");
       load();
     } catch (err) {
@@ -141,6 +145,7 @@ export default function YearsPage() {
         editingTermId ? "PUT" : "POST", body);
       setTerm(emptyTerm);
       setEditingTermId(null);
+      setShowTermForm(false);
       setMessage(editingTermId ? "Term updated" : "Term created");
       load();
     } catch (err) {
@@ -192,6 +197,7 @@ export default function YearsPage() {
       endDate: item.endDate,
       status: item.status === "ARCHIVED" ? "END" : "RUNNING"
     });
+    setShowYearForm(true);
   }
 
   function editTerm(item) {
@@ -203,16 +209,19 @@ export default function YearsPage() {
       academicYearId: String(item.academicYearId),
       status: item.status
     });
+    setShowTermForm(true);
   }
 
   function cancelYearEdit() {
     setEditingYearId(null);
     setYear(emptyYear);
+    setShowYearForm(false);
   }
 
   function cancelTermEdit() {
     setEditingTermId(null);
     setTerm(emptyTerm);
+    setShowTermForm(false);
   }
 
   function yearDisplayStatus(item) {
@@ -834,20 +843,25 @@ export default function YearsPage() {
       {/* ========================================================================= */}
       {activeTab === "years-terms" && (
         <div>
-          <form className="card form-card" onSubmit={saveYear}>
-            <h3>{editingYearId ? "Edit academic year" : "New academic year"}</h3>
-            <input required placeholder="2026-2027" value={year.name} onChange={(e) => setYear({ ...year, name: e.target.value })} />
-            <input required type="date" value={year.startDate} onChange={(e) => setYear({ ...year, startDate: e.target.value })} />
-            <input required type="date" value={year.endDate} onChange={(e) => setYear({ ...year, endDate: e.target.value })} />
-            <label>Academic year status</label>
-            <select value={year.status} onChange={(e) => setYear({ ...year, status: e.target.value })}>
-              <option value="RUNNING">Running</option><option value="END">End</option>
-            </select>
-            <div className="row">
-              <button>{editingYearId ? "Update year" : "Create year"}</button>
-              {editingYearId && <button type="button" className="secondary" onClick={cancelYearEdit}>Cancel</button>}
-            </div>
-          </form>
+          <div className="page-actions">
+            <button type="button" onClick={() => { setEditingYearId(null); setYear(emptyYear); setShowYearForm(true); }}>Add Academic Year</button>
+            <button type="button" className="secondary" onClick={() => { setEditingTermId(null); setTerm({ ...emptyTerm, academicYearId: calendarYearId }); setShowTermForm(true); }}>Add Term</button>
+          </div>
+          <ActionModal open={showYearForm} title={editingYearId ? "Edit academic year" : "Create academic year"} onClose={cancelYearEdit}>
+            <form className="card form-card" onSubmit={saveYear}>
+              <input required placeholder="2026-2027" value={year.name} onChange={(e) => setYear({ ...year, name: e.target.value })} />
+              <input required type="date" value={year.startDate} onChange={(e) => setYear({ ...year, startDate: e.target.value })} />
+              <input required type="date" value={year.endDate} onChange={(e) => setYear({ ...year, endDate: e.target.value })} />
+              <label>Academic year status</label>
+              <select value={year.status} onChange={(e) => setYear({ ...year, status: e.target.value })}>
+                <option value="RUNNING">Running</option><option value="END">End</option>
+              </select>
+              <div className="row">
+                <button>{editingYearId ? "Update year" : "Create year"}</button>
+                <button type="button" className="secondary" onClick={cancelYearEdit}>Cancel</button>
+              </div>
+            </form>
+          </ActionModal>
 
           <h3>Academic Year List</h3>
           <table>
@@ -899,23 +913,24 @@ export default function YearsPage() {
             </div>
           )}
 
-          <form className="card form-card" onSubmit={saveTerm}>
-            <h3>{editingTermId ? "Edit term" : "New term"}</h3>
-            <select required value={term.academicYearId} onChange={(e) => setTerm({ ...term, academicYearId: e.target.value })}>
-              <option value="">Select year</option>
-              {years.filter((item) => item.status !== "ARCHIVED").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
-            <input required placeholder="Term 1" value={term.name} onChange={(e) => setTerm({ ...term, name: e.target.value })} />
-            <input required type="date" value={term.startDate} onChange={(e) => setTerm({ ...term, startDate: e.target.value })} />
-            <input required type="date" value={term.endDate} onChange={(e) => setTerm({ ...term, endDate: e.target.value })} />
-            <select value={term.status} onChange={(e) => setTerm({ ...term, status: e.target.value })}>
-              <option>ACTIVE</option><option>INACTIVE</option>
-            </select>
-            <div className="row">
-              <button>{editingTermId ? "Update term" : "Create term"}</button>
-              {editingTermId && <button type="button" className="secondary" onClick={cancelTermEdit}>Cancel</button>}
-            </div>
-          </form>
+          <ActionModal open={showTermForm} title={editingTermId ? "Edit term" : "Create term"} onClose={cancelTermEdit}>
+            <form className="card form-card" onSubmit={saveTerm}>
+              <select required value={term.academicYearId} onChange={(e) => setTerm({ ...term, academicYearId: e.target.value })}>
+                <option value="">Select year</option>
+                {years.filter((item) => item.status !== "ARCHIVED").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+              <input required placeholder="Term 1" value={term.name} onChange={(e) => setTerm({ ...term, name: e.target.value })} />
+              <input required type="date" value={term.startDate} onChange={(e) => setTerm({ ...term, startDate: e.target.value })} />
+              <input required type="date" value={term.endDate} onChange={(e) => setTerm({ ...term, endDate: e.target.value })} />
+              <select value={term.status} onChange={(e) => setTerm({ ...term, status: e.target.value })}>
+                <option>ACTIVE</option><option>INACTIVE</option>
+              </select>
+              <div className="row">
+                <button>{editingTermId ? "Update term" : "Create term"}</button>
+                <button type="button" className="secondary" onClick={cancelTermEdit}>Cancel</button>
+              </div>
+            </form>
+          </ActionModal>
 
           <h3>Terms by Academic Year</h3>
           {years.map((yearItem) => {

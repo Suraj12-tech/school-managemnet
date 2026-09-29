@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 
@@ -23,6 +24,8 @@ export default function SubjectsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [showDepartmentForm, setShowDepartmentForm] = useState(false);
+  const [showSubjectForm, setShowSubjectForm] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -52,6 +55,30 @@ export default function SubjectsPage() {
     setMessage("");
   }
 
+  function openDepartmentForm() {
+    setEditingDepartmentId(null);
+    setDepartment(emptyDepartment);
+    setShowDepartmentForm(true);
+  }
+
+  function closeDepartmentForm() {
+    setShowDepartmentForm(false);
+    setEditingDepartmentId(null);
+    setDepartment(emptyDepartment);
+  }
+
+  function openSubjectForm() {
+    setEditingSubjectId(null);
+    setSubject(emptySubject);
+    setShowSubjectForm(true);
+  }
+
+  function closeSubjectForm() {
+    setShowSubjectForm(false);
+    setEditingSubjectId(null);
+    setSubject(emptySubject);
+  }
+
   async function saveDepartment(e) {
     e.preventDefault();
     clearFeedback();
@@ -61,8 +88,7 @@ export default function SubjectsPage() {
         editingDepartmentId ? "PUT" : "POST",
         department
       );
-      setDepartment(emptyDepartment);
-      setEditingDepartmentId(null);
+      closeDepartmentForm();
       setMessage(editingDepartmentId ? "Department updated" : "Department created");
       await load();
     } catch (err) {
@@ -79,8 +105,7 @@ export default function SubjectsPage() {
         editingSubjectId ? "PUT" : "POST",
         { ...subject, departmentId: Number(subject.departmentId) }
       );
-      setSubject(emptySubject);
-      setEditingSubjectId(null);
+      closeSubjectForm();
       setMessage(editingSubjectId ? "Subject updated" : "Subject created");
       await load();
     } catch (err) {
@@ -97,6 +122,7 @@ export default function SubjectsPage() {
       status: item.status || "ACTIVE"
     });
     setSelectedDepartment(null);
+    setShowDepartmentForm(true);
   }
 
   function editSubject(item) {
@@ -109,6 +135,7 @@ export default function SubjectsPage() {
       status: item.status || "ACTIVE"
     });
     setSelectedSubject(null);
+    setShowSubjectForm(true);
   }
 
   async function toggleDepartment(item) {
@@ -224,28 +251,33 @@ export default function SubjectsPage() {
 
   return (
     <div>
-      <PageHeader title="Departments & subjects" description="Organize the academic catalog and map subjects to classes." />
+      <PageHeader title="Departments & subjects" description="Organize the academic catalog and map subjects to classes." actions={
+        <>
+          <button type="button" onClick={openDepartmentForm}>Add Department</button>
+          <button type="button" className="secondary" onClick={openSubjectForm}>Add Subject</button>
+        </>
+      } />
       {message && <p className="ok">{message}</p>}
       {error && <p className="error">{error}</p>}
       <div className="card filter-bar"><input placeholder="Search departments and subjects" value={query} onChange={(e) => setQuery(e.target.value)} /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>ACTIVE</option><option>INACTIVE</option></select></div>
 
-      <form className="card form-card" onSubmit={saveDepartment}>
-        <h3>{editingDepartmentId ? "Edit department" : "New department"}</h3>
-        <input required placeholder="Department name" value={department.name}
-          onChange={(e) => setDepartment({ ...department, name: e.target.value })} />
-        <input placeholder="Code (optional)" value={department.code}
-          onChange={(e) => setDepartment({ ...department, code: e.target.value })} />
-        <textarea placeholder="Description (optional)" value={department.description}
-          onChange={(e) => setDepartment({ ...department, description: e.target.value })} />
-        <select value={department.status}
-          onChange={(e) => setDepartment({ ...department, status: e.target.value })}>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
-        <button>{editingDepartmentId ? "Save department" : "Create department"}</button>
-        {editingDepartmentId && <button type="button" className="secondary"
-          onClick={() => { setEditingDepartmentId(null); setDepartment(emptyDepartment); }}>Cancel</button>}
-      </form>
+      <ActionModal open={showDepartmentForm} title={editingDepartmentId ? "Edit department" : "Create department"} onClose={closeDepartmentForm}>
+        <form className="card form-card" onSubmit={saveDepartment}>
+          <input required placeholder="Department name" value={department.name}
+            onChange={(e) => setDepartment({ ...department, name: e.target.value })} />
+          <input placeholder="Code (optional)" value={department.code}
+            onChange={(e) => setDepartment({ ...department, code: e.target.value })} />
+          <textarea placeholder="Description (optional)" value={department.description}
+            onChange={(e) => setDepartment({ ...department, description: e.target.value })} />
+          <select value={department.status}
+            onChange={(e) => setDepartment({ ...department, status: e.target.value })}>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+          <button>{editingDepartmentId ? "Save department" : "Create department"}</button>
+          {editingDepartmentId && <button type="button" className="secondary" onClick={closeDepartmentForm}>Cancel</button>}
+        </form>
+      </ActionModal>
 
       <h3>Departments</h3>
       <table>
@@ -271,30 +303,30 @@ export default function SubjectsPage() {
         </tbody>
       </table>
 
-      <form className="card form-card" onSubmit={saveSubject}>
-        <h3>{editingSubjectId ? "Edit subject" : "New subject"}</h3>
-        <input required placeholder="Subject name" value={subject.name}
-          onChange={(e) => setSubject({ ...subject, name: e.target.value })} />
-        <input required placeholder="Subject code" value={subject.code}
-          onChange={(e) => setSubject({ ...subject, code: e.target.value })} />
-        <select required value={subject.departmentId}
-          onChange={(e) => setSubject({ ...subject, departmentId: e.target.value })}>
-          <option value="">Department</option>
-          {departments.filter((item) => item.status === "ACTIVE").map((item) => (
-            <option key={item.id} value={item.id}>{item.name}</option>
-          ))}
-        </select>
-        <textarea placeholder="Description (optional)" value={subject.description}
-          onChange={(e) => setSubject({ ...subject, description: e.target.value })} />
-        <select value={subject.status}
-          onChange={(e) => setSubject({ ...subject, status: e.target.value })}>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
-        <button>{editingSubjectId ? "Save subject" : "Create subject"}</button>
-        {editingSubjectId && <button type="button" className="secondary"
-          onClick={() => { setEditingSubjectId(null); setSubject(emptySubject); }}>Cancel</button>}
-      </form>
+      <ActionModal open={showSubjectForm} title={editingSubjectId ? "Edit subject" : "Create subject"} onClose={closeSubjectForm}>
+        <form className="card form-card" onSubmit={saveSubject}>
+          <input required placeholder="Subject name" value={subject.name}
+            onChange={(e) => setSubject({ ...subject, name: e.target.value })} />
+          <input required placeholder="Subject code" value={subject.code}
+            onChange={(e) => setSubject({ ...subject, code: e.target.value })} />
+          <select required value={subject.departmentId}
+            onChange={(e) => setSubject({ ...subject, departmentId: e.target.value })}>
+            <option value="">Department</option>
+            {departments.filter((item) => item.status === "ACTIVE").map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
+          <textarea placeholder="Description (optional)" value={subject.description}
+            onChange={(e) => setSubject({ ...subject, description: e.target.value })} />
+          <select value={subject.status}
+            onChange={(e) => setSubject({ ...subject, status: e.target.value })}>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+          <button>{editingSubjectId ? "Save subject" : "Create subject"}</button>
+          <button type="button" className="secondary" onClick={closeSubjectForm}>Cancel</button>
+        </form>
+      </ActionModal>
 
       <h3>Subjects</h3>
       <table>

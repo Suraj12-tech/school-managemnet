@@ -15,9 +15,7 @@ public class PromotionRequest {
     @NotNull @Positive
     private Long toAcademicYearId;
     @NotNull @Positive
-    private Long targetClassId;
-    @NotNull @Positive
-    private Long targetSectionId;
+    private Long sourceClassId;
     private List<Long> studentIds;
     private List<PromotionDecision> decisions;
 }

@@ -11,8 +11,22 @@ import com.schoolenterprise.school.entity.AcademicYear;
 import com.schoolenterprise.school.entity.School;
 import com.schoolenterprise.school.repository.AcademicYearRepository;
 import com.schoolenterprise.school.repository.SchoolRepository;
+import com.schoolenterprise.academics.entity.SchoolClass;
+import com.schoolenterprise.academics.entity.Section;
+import com.schoolenterprise.academics.repository.SchoolClassRepository;
+import com.schoolenterprise.academics.repository.SectionRepository;
 import com.schoolenterprise.staff.entity.Staff;
 import com.schoolenterprise.staff.repository.StaffRepository;
+import com.schoolenterprise.student.entity.ClassHistory;
+import com.schoolenterprise.student.entity.Enrollment;
+import com.schoolenterprise.student.entity.Guardian;
+import com.schoolenterprise.student.entity.Student;
+import com.schoolenterprise.student.entity.StudentGuardian;
+import com.schoolenterprise.student.repository.ClassHistoryRepository;
+import com.schoolenterprise.student.repository.EnrollmentRepository;
+import com.schoolenterprise.student.repository.GuardianRepository;
+import com.schoolenterprise.student.repository.StudentGuardianRepository;
+import com.schoolenterprise.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -48,6 +63,13 @@ public class DataSeeder implements CommandLineRunner {
     private final AppUserRepository userRepository;
     private final SchoolRepository schoolRepository;
     private final AcademicYearRepository academicYearRepository;
+    private final SchoolClassRepository classRepository;
+    private final SectionRepository sectionRepository;
+    private final StudentRepository studentRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final ClassHistoryRepository classHistoryRepository;
+    private final GuardianRepository guardianRepository;
+    private final StudentGuardianRepository studentGuardianRepository;
     private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -65,11 +87,13 @@ public class DataSeeder implements CommandLineRunner {
         grant(subjectTeacher, List.of("students", "subjects", "classes", "dashboard"), List.of("view"));
 
         School school = seedSchool();
-        seedYear(school);
+        AcademicYear academicYear = seedYear(school);
 
         seedDemoUser("accountant", "accountant@school.local", "Accountant User", "Accountant@123", accountant, school.getId(), "SCHOOL");
         seedDemoUser("teacher", "teacher@school.local", "Class Teacher", "Teacher@123", classTeacher, null, null);
         seedTeacherStaff();
+        seedDemoClassesAndStudents(school, academicYear);
+        seedDemoPromotionData(school, academicYear);
 
         if (userRepository.findByUsername("admin").isEmpty()) {
             AppUser admin = new AppUser();
@@ -275,15 +299,262 @@ public class DataSeeder implements CommandLineRunner {
         });
     }
 
-    private void seedYear(School school) {
-        if (academicYearRepository.findBySchoolId(school.getId()).isEmpty()) {
-            AcademicYear year = new AcademicYear();
-            year.setSchoolId(school.getId());
-            year.setName("2026-2027");
-            year.setStartDate(LocalDate.of(2026, 4, 1));
-            year.setEndDate(LocalDate.of(2027, 3, 31));
-            year.setCurrentYear(true);
-            academicYearRepository.save(year);
+    private AcademicYear seedYear(School school) {
+        List<AcademicYear> years = academicYearRepository.findBySchoolId(school.getId());
+        return years.stream()
+                .filter(year -> year.isCurrentYear() && !"ARCHIVED".equals(year.getStatus()))
+                .findFirst()
+                .orElseGet(() -> years.stream()
+                        .filter(year -> !"ARCHIVED".equals(year.getStatus()))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            AcademicYear year = new AcademicYear();
+                            year.setSchoolId(school.getId());
+                            year.setName("2026-2027");
+                            year.setStartDate(LocalDate.of(2026, 4, 1));
+                            year.setEndDate(LocalDate.of(2027, 3, 31));
+                            year.setCurrentYear(true);
+                            return academicYearRepository.save(year);
+                        }));
+    }
+
+    private void seedDemoClassesAndStudents(School school, AcademicYear year) {
+        String[][] assignments = {
+                {"Class 1", "A", "TEST001", "Aarav", "Sharma"},
+                {"Class 1", "A", "TEST002", "Ananya", "Verma"},
+                {"Class 1", "A", "TEST003", "Rohan", "Gupta"},
+                {"Class 1", "B", "TEST004", "Priya", "Singh"},
+                {"Class 1", "B", "TEST005", "Arjun", "Kumar"},
+                {"Class 6", "A", "TEST006", "Suraj", "Sharma"},
+                {"Class 6", "A", "TEST007", "Rahul", "Kumar"},
+                {"Class 6", "A", "TEST008", "Aman", "Singh"},
+                {"Class 6", "A", "TEST009", "Neha", "Verma"},
+                {"Class 6", "B", "TEST010", "Karan", "Gupta"},
+                {"Class 6", "B", "TEST011", "Anjali", "Singh"},
+                {"Class 6", "B", "TEST012", "Rohit", "Sharma"},
+                {"Class 7", "A", "TEST013", "Aditya", "Kumar"},
+                {"Class 7", "A", "TEST014", "Sneha", "Verma"},
+                {"Class 7", "A", "TEST015", "Vivek", "Singh"},
+                {"Class 7", "B", "TEST016", "Piyush", "Gupta"},
+                {"Class 7", "B", "TEST017", "Kavya", "Sharma"},
+                {"Class 7", "C", "TEST018", "Nikhil", "Kumar"},
+                {"Class 7", "C", "TEST019", "Simran", "Singh"},
+                {"Class 10", "A", "TEST020", "Yash", "Verma"},
+                {"Class 10", "A", "TEST021", "Ishita", "Sharma"},
+                {"Class 10", "A", "TEST022", "Mohit", "Kumar"},
+                {"Class 10", "B", "TEST023", "Akash", "Singh"},
+                {"Class 10", "B", "TEST024", "Muskan", "Gupta"},
+                {"Class 12", "A", "TEST025", "Dev", "Sharma"},
+                {"Class 12", "A", "TEST026", "Riya", "Kumar"},
+                {"Class 12", "A", "TEST027", "Harsh", "Singh"},
+                {"Class 12", "A", "TEST028", "Mehak", "Verma"},
+                {"Class 12", "B", "TEST029", "Abhishek", "Gupta"},
+                {"Class 12", "B", "TEST030", "Tanu", "Sharma"}
+        };
+
+        Map<String, SchoolClass> classes = new java.util.HashMap<>();
+        Map<String, Section> sections = new java.util.HashMap<>();
+        for (String[] assignment : assignments) {
+            String className = assignment[0];
+            SchoolClass schoolClass = classes.computeIfAbsent(className,
+                    name -> classRepository.findBySchoolId(school.getId()).stream()
+                            .filter(item -> item.getName().equalsIgnoreCase(name))
+                            .findFirst()
+                            .orElseGet(() -> {
+                                SchoolClass created = new SchoolClass();
+                                created.setSchoolId(school.getId());
+                                created.setName(name);
+                                created.setNumberOfClassrooms("Class 7".equals(name) ? 3 : 2);
+                                return classRepository.save(created);
+                            }));
+            String sectionKey = schoolClass.getId() + ":" + year.getId() + ":" + assignment[1];
+            Section section = sections.computeIfAbsent(sectionKey, key -> sectionRepository.findByClassId(schoolClass.getId()).stream()
+                    .filter(item -> item.getAcademicYearId().equals(year.getId())
+                            && item.getName().equalsIgnoreCase(assignment[1]))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        Section created = new Section();
+                        created.setClassId(schoolClass.getId());
+                        created.setAcademicYearId(year.getId());
+                        created.setName(assignment[1]);
+                        created.setStatus("ACTIVE");
+                        return sectionRepository.save(created);
+                    }));
+            seedDemoStudent(assignment, section, schoolClass, year);
+        }
+        log.info("Ensured demo class workflow data for academic year {}", year.getName());
+    }
+
+    private void seedDemoStudent(String[] assignment, Section section, SchoolClass schoolClass, AcademicYear year) {
+        Student student = studentRepository.findByAdmissionNumber(assignment[2]).orElse(null);
+        if (student != null) {
+            return;
+        }
+        int number = Integer.parseInt(assignment[2].substring(4));
+        student = new Student();
+        student.setAdmissionNumber(assignment[2]);
+        student.setFirstName(assignment[3]);
+        student.setLastName(assignment[4]);
+        student.setDateOfBirth(LocalDate.of(2010 - (number % 10), (number % 12) + 1, (number % 27) + 1));
+        student.setGender(number % 2 == 0 ? "FEMALE" : "MALE");
+        student.setEmail("test" + String.format("%03d", number) + "@school.local");
+        student.setPhone("987650" + String.format("%04d", number));
+        student.setStatus("ACTIVE");
+        student.setCurrentSectionId(section.getId());
+        student = studentRepository.save(student);
+
+        Enrollment enrollment = new Enrollment();
+        enrollment.setStudentId(student.getId());
+        enrollment.setSectionId(section.getId());
+        enrollment.setAcademicYearId(year.getId());
+        enrollment.setStatus("ENROLLED");
+        enrollment.setEnrolledOn(LocalDate.now());
+        enrollmentRepository.save(enrollment);
+
+        ClassHistory history = new ClassHistory();
+        history.setStudentId(student.getId());
+        history.setClassId(schoolClass.getId());
+        history.setSectionId(section.getId());
+        history.setAcademicYearId(year.getId());
+        history.setResultStatus("ONGOING");
+        classHistoryRepository.save(history);
+
+        Guardian guardian = new Guardian();
+        guardian.setFullName(assignment[4] + " Parent");
+        guardian.setRelationType(number % 2 == 0 ? "MOTHER" : "FATHER");
+        guardian.setPhone("987650" + String.format("%04d", number + 100));
+        guardian.setEmail("guardian" + String.format("%03d", number) + "@school.local");
+        guardian.setAddress("Demo Residential Area");
+        guardian.setOccupation("Professional");
+        guardian.setStatus("ACTIVE");
+        guardian = guardianRepository.save(guardian);
+
+        StudentGuardian link = new StudentGuardian();
+        link.setStudentId(student.getId());
+        link.setGuardianId(guardian.getId());
+        link.setRelationshipType(guardian.getRelationType());
+        link.setPrimaryGuardian(true);
+        link.setEmergencyContact(true);
+        studentGuardianRepository.save(link);
+    }
+
+    private void seedDemoPromotionData(School school, AcademicYear sourceYear) {
+        int sourceStartYear = sourceYear.getStartDate() == null
+                ? Integer.parseInt(sourceYear.getName().substring(0, 4))
+                : sourceYear.getStartDate().getYear();
+        int targetStartYear = sourceStartYear + 1;
+        String targetYearName = targetStartYear + "-" + (targetStartYear + 1);
+        AcademicYear targetYear = academicYearRepository.findBySchoolId(school.getId()).stream()
+                .filter(year -> year.getName().equalsIgnoreCase(targetYearName))
+                .findFirst()
+                .orElseGet(() -> {
+                    AcademicYear year = new AcademicYear();
+                    year.setSchoolId(school.getId());
+                    year.setName(targetYearName);
+                    year.setStartDate(LocalDate.of(targetStartYear, 4, 1));
+                    year.setEndDate(LocalDate.of(targetStartYear + 1, 3, 31));
+                    year.setCurrentYear(false);
+                    year.setStatus("ACTIVE");
+                    return academicYearRepository.save(year);
+                });
+
+        SchoolClass class1 = ensureDemoClass(school, "Class 1", 2);
+        SchoolClass class6 = ensureDemoClass(school, "Class 6", 2);
+        SchoolClass class7 = ensureDemoClass(school, "Class 7", 3);
+        Section source1A = ensureDemoSection(class1, sourceYear, "A");
+        Section source6A = ensureDemoSection(class6, sourceYear, "A");
+        Section source6B = ensureDemoSection(class6, sourceYear, "B");
+        Section target7A = ensureDemoSection(class7, targetYear, "A");
+        ensureDemoSection(class7, targetYear, "B");
+        Section target7C = ensureDemoSection(class7, targetYear, "C");
+
+        ensurePromotionDemoStudent("PROMO-TEST-001", "Aarav", "Eligible", sourceYear,
+                source6A, class6, null, null);
+        ensurePromotionDemoStudent("PROMO-TEST-002", "Diya", "Eligible", sourceYear,
+                source6B, class6, null, null);
+        ensurePromotionDemoStudent("PROMO-TEST-003", "Kabir", "OtherClass", sourceYear,
+                source1A, class1, null, null);
+        ensurePromotionDemoStudent("PROMO-TEST-004", "Mira", "AlreadyEnrolled", sourceYear,
+                source6A, class6, targetYear, target7C);
+
+        log.info("Ensured promotion demo records: source year {}, target year {}, Class 6 -> Class 7 Section C",
+                sourceYear.getName(), targetYear.getName());
+    }
+
+    private SchoolClass ensureDemoClass(School school, String name, int classroomCount) {
+        return classRepository.findBySchoolId(school.getId()).stream()
+                .filter(item -> item.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElseGet(() -> {
+                    SchoolClass schoolClass = new SchoolClass();
+                    schoolClass.setSchoolId(school.getId());
+                    schoolClass.setName(name);
+                    schoolClass.setNumberOfClassrooms(classroomCount);
+                    return classRepository.save(schoolClass);
+                });
+    }
+
+    private Section ensureDemoSection(SchoolClass schoolClass, AcademicYear year, String name) {
+        return sectionRepository.findByClassId(schoolClass.getId()).stream()
+                .filter(section -> section.getAcademicYearId().equals(year.getId())
+                        && section.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElseGet(() -> {
+                    Section section = new Section();
+                    section.setClassId(schoolClass.getId());
+                    section.setAcademicYearId(year.getId());
+                    section.setName(name);
+                    section.setStatus("ACTIVE");
+                    return sectionRepository.save(section);
+                });
+    }
+
+    private void ensurePromotionDemoStudent(String admissionNumber, String firstName, String lastName,
+                                            AcademicYear sourceYear, Section sourceSection, SchoolClass sourceClass,
+                                            AcademicYear existingTargetYear, Section existingTargetSection) {
+        Student student = studentRepository.findByAdmissionNumber(admissionNumber).orElseGet(() -> {
+            Student created = new Student();
+            created.setAdmissionNumber(admissionNumber);
+            created.setFirstName(firstName);
+            created.setLastName(lastName);
+            created.setDateOfBirth(LocalDate.of(2013, 5, 15));
+            created.setGender("OTHER");
+            created.setEmail(admissionNumber.toLowerCase() + "@school.local");
+            created.setPhone("9000000000");
+            created.setStatus("ACTIVE");
+            created.setCurrentSectionId(sourceSection.getId());
+            return studentRepository.save(created);
+        });
+
+        if (enrollmentRepository.findByStudentId(student.getId()).stream()
+                .noneMatch(enrollment -> enrollment.getAcademicYearId().equals(sourceYear.getId()))) {
+            Enrollment enrollment = new Enrollment();
+            enrollment.setStudentId(student.getId());
+            enrollment.setSectionId(sourceSection.getId());
+            enrollment.setAcademicYearId(sourceYear.getId());
+            enrollment.setStatus("ENROLLED");
+            enrollment.setEnrolledOn(sourceYear.getStartDate());
+            enrollmentRepository.save(enrollment);
+
+            ClassHistory history = new ClassHistory();
+            history.setStudentId(student.getId());
+            history.setClassId(sourceClass.getId());
+            history.setSectionId(sourceSection.getId());
+            history.setAcademicYearId(sourceYear.getId());
+            history.setResultStatus("ONGOING");
+            classHistoryRepository.save(history);
+        }
+
+        if (existingTargetYear != null && existingTargetSection != null
+                && !enrollmentRepository.existsByStudentIdAndAcademicYearId(
+                        student.getId(), existingTargetYear.getId())) {
+            Enrollment existingEnrollment = new Enrollment();
+            existingEnrollment.setStudentId(student.getId());
+            existingEnrollment.setSectionId(existingTargetSection.getId());
+            existingEnrollment.setAcademicYearId(existingTargetYear.getId());
+            existingEnrollment.setStatus("ENROLLED");
+            existingEnrollment.setEnrolledOn(existingTargetYear.getStartDate());
+            enrollmentRepository.save(existingEnrollment);
         }
     }
 }

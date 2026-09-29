@@ -1,6 +1,7 @@
 package com.schoolenterprise.student.service;
 
 import com.schoolenterprise.academics.entity.Section;
+import com.schoolenterprise.academics.dto.SectionStudentResponse;
 import com.schoolenterprise.academics.repository.SchoolClassRepository;
 import com.schoolenterprise.academics.repository.SectionRepository;
 import com.schoolenterprise.audit.service.AuditService;
@@ -293,6 +294,35 @@ public class StudentService {
     public List<Enrollment> enrollments(Long studentId) {
         get(studentId);
         return enrollmentRepository.findByStudentId(studentId);
+    }
+
+    public List<SectionStudentResponse> studentsInSection(Long sectionId, Long academicYearId) {
+        Section section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> AppException.notFound("Section not found"));
+        permissionService.assertStudentSection(sectionId);
+        if (academicYearId != null && !academicYearId.equals(section.getAcademicYearId())) {
+            throw AppException.badRequest("Section does not belong to the selected academic year");
+        }
+        Long yearId = section.getAcademicYearId();
+        String className = schoolClassRepository.findById(section.getClassId())
+                .map(c -> c.getName()).orElse("Class " + section.getClassId());
+        String yearName = academicYearRepository.findById(yearId)
+                .map(AcademicYear::getName).orElse("Year " + yearId);
+
+        return enrollmentRepository.findBySectionIdAndAcademicYearId(sectionId, yearId).stream()
+                .map(enrollment -> studentRepository.findById(enrollment.getStudentId())
+                        .map(student -> {
+                            permissionService.assertStudent(student.getId(), sectionId);
+                            return new SectionStudentResponse(
+                                    student.getId(), student.getAdmissionNumber(), student.getFirstName(),
+                                    student.getLastName(), student.getDateOfBirth() == null
+                                            ? null : student.getDateOfBirth().toString(),
+                                    student.getGender(), student.getEmail(), student.getPhone(), student.getStatus(),
+                                    section.getClassId(), className, sectionId, section.getName(), yearId, yearName,
+                                    enrollment.getStatus());
+                        }).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 
     public List<ClassHistory> history(Long studentId) {

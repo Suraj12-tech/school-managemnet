@@ -3,7 +3,6 @@ import { clearSession, getToken } from "../auth/authStorage.js";
 // Empty API_URL uses Vite's same-origin proxy during local development.
 // Set VITE_API_URL when the frontend and backend run on different servers.
 const API_URL = import.meta.env.VITE_API_URL ?? "";
-
 export async function api(path, method = "GET", body) {
   const token = getToken();
   let response;

@@ -665,7 +665,8 @@ public class AcademicsService {
                 yearName,
                 section.getClassTeacherStaffId(),
                 teacherName,
-                studentRepository.countByCurrentSectionId(section.getId()),
+                enrollmentRepository.findBySectionIdAndAcademicYearId(
+                        section.getId(), section.getAcademicYearId()).size(),
                 section.getStatus());
     }
 
@@ -682,6 +683,7 @@ public class AcademicsService {
 
     public SectionDetailResponse sectionDetail(Long sectionId) {
         Section section = sectionForSchool(sectionId);
+        permissionService.assertStudentSection(section.getId());
         SectionSummary summary = sectionSummary(section);
         List<SubjectSummary> subjects = subjectsForClass(section.getClassId(), section.getAcademicYearId());
         

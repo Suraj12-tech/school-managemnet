@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
 import ActionModal from "../components/ActionModal.jsx";
 import PageHeader from "../components/PageHeader.jsx";
@@ -177,7 +178,7 @@ export default function ClassesPage() {
       <table>
         <thead><tr><th>Class</th><th>Classrooms</th></tr></thead>
         <tbody>
-          {classes.map((c) => <tr key={c.id}><td>{c.name}</td><td>{c.numberOfClassrooms}</td></tr>)}
+          {classes.map((c) => <tr key={c.id}><td><Link to={`/classes/${c.id}`}>{c.name}</Link></td><td>{c.numberOfClassrooms}</td></tr>)}
         </tbody>
       </table>
       <ActionModal open={showSectionForm} title={editingSectionId ? "Edit section" : "Create section"} onClose={cancelEdit}>
@@ -267,7 +268,7 @@ export default function ClassesPage() {
                 </select>
               </td>
               <td>
-                <button type="button" onClick={() => viewClass(s)}>View</button>{" "}
+                <Link to={`/classes/${s.classId}?academicYearId=${s.academicYearId}`}><button type="button">View</button></Link>{" "}
                 <button type="button" onClick={() => editSection(s)}>Edit</button>{" "}
                 <button type="button" onClick={() => deleteSection(s.id)}>Delete</button>
               </td>

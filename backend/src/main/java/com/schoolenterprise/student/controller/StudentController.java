@@ -6,6 +6,7 @@ import com.schoolenterprise.student.dto.*;
 import com.schoolenterprise.student.entity.*;
 import com.schoolenterprise.student.service.StudentService;
 import com.schoolenterprise.student.service.PromotionService;
+import com.schoolenterprise.academics.dto.SectionStudentResponse;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -131,6 +132,14 @@ public class StudentController {
     @RequirePermission(module = "students", action = "view")
     public ApiResponse<List<Enrollment>> enrollments(@PathVariable Long id) {
         return ApiResponse.ok(studentService.enrollments(id));
+    }
+
+    @GetMapping("/sections/{sectionId}/students")
+    @RequirePermission(module = "classes", action = "view")
+    public ApiResponse<List<SectionStudentResponse>> sectionStudents(
+            @PathVariable Long sectionId,
+            @RequestParam(required = false) Long academicYearId) {
+        return ApiResponse.ok(studentService.studentsInSection(sectionId, academicYearId));
     }
 
     @GetMapping("/students/{id}/history")

@@ -9,6 +9,7 @@ public record PromotionRow(
         String newClass,
         String newSection,
         String status,
-        String issue
+        String issue,
+        boolean promotionBlocked
 ) {
 }

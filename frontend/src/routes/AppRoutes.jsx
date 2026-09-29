@@ -7,6 +7,8 @@ import DashboardPage from "../pages/DashboardPage.jsx";
 import SchoolPage from "../pages/SchoolPage.jsx";
 import YearsPage from "../pages/YearsPage.jsx";
 import ClassesPage from "../pages/ClassesPage.jsx";
+import ClassDetailsPage from "../pages/ClassDetailsPage.jsx";
+import SectionDetailsPage from "../pages/SectionDetailsPage.jsx";
 import SubjectsPage from "../pages/SubjectsPage.jsx";
 import UsersPage from "../pages/UsersPage.jsx";
 import RolesPage from "../pages/RolesPage.jsx";
@@ -41,6 +43,8 @@ export default function AppRoutes() {
         <Route path="school" element={<SchoolPage />} />
         <Route path="years" element={<YearsPage />} />
         <Route path="classes" element={<ClassesPage />} />
+        <Route path="classes/:classId" element={<ClassDetailsPage />} />
+        <Route path="classes/:classId/sections/:sectionId" element={<SectionDetailsPage />} />
         <Route path="subjects" element={<SubjectsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="roles" element={<RolesPage />} />

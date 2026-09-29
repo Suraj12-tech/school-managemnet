@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { api } from "../api/client.js";
 import PageHeader from "../components/PageHeader.jsx";
 
 export default function StudentProfilePage() {
   const { id } = useParams();
+  const location = useLocation();
+  const returnTo = new URLSearchParams(location.search).get("returnTo");
   const [student, setStudent] = useState(null);
   const [sections, setSections] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -81,6 +83,7 @@ export default function StudentProfilePage() {
   return (
     <div>
       <PageHeader title={`Student profile — ${student.admissionNumber}`} description="Update the student record, enrollment, guardians, and documents." />
+      {returnTo && <p className="breadcrumb"><Link to={returnTo}>Back to section students</Link></p>}
       {error && <p className="error">{error}</p>}
       <div className="tabs" role="tablist">
         {[["overview", "Overview"], ["academic", "Academic"], ["guardians", "Guardians"], ["documents", "Documents"]].map(([value, label]) => (

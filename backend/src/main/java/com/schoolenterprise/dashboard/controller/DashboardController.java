@@ -1,6 +1,7 @@
 package com.schoolenterprise.dashboard.controller;
 
 import com.schoolenterprise.common.api.ApiResponse;
+import com.schoolenterprise.common.security.ExcludeTeacherRoles;
 import com.schoolenterprise.common.security.RequirePermission;
 import com.schoolenterprise.dashboard.service.DashboardService;
 import com.schoolenterprise.finance.entity.Invoice;
@@ -15,6 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
+@ExcludeTeacherRoles
 public class DashboardController {
 
     private final DashboardService dashboardService;

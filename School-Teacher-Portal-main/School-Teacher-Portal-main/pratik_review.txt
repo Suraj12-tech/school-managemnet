@@ -1,0 +1,586 @@
+Teacher Portal — Detailed Review & Required Further Development
+I reviewed the current School Teacher Portal implementation against the provided School Enterprise Platform – Daily Academic Operations & Teacher Experience, Stage 1 requirements. The Stage 1 scope is intended to cover the teacher's complete academic operating workflow, including assigned classes and subjects, attendance, examinations, marks, assignments, dashboards, and academic performance.
+The current implementation provides a basic foundation, but it should not yet be considered complete Stage 1 implementation. The portal currently demonstrates the main dashboard, classes, assignments, and exams/marks areas, but several required workflows and detailed teacher workspaces are still missing or need substantial expansion.
+Please use the following as the development review and required next-work specification.
+1. Rework the Information Architecture
+The current primary navigation is too limited:
+Dashboard → My Classes → Assignments → Exams & Marks
+The teacher needs a clearer academic workspace.
+A recommended structure is:
+DashboardMy ClassesMy SubjectsAttendanceAssignmentsExams & MarksReports
+However, do not create unnecessary standalone pages when a feature logically belongs inside a Class, Subject, Student, Assignment, or Assessment workspace.
+The principle should be:
+Global navigation tells the teacher where they are working. Contextual actions inside each workspace tell the teacher what they can do.
+The Stage 1 specification explicitly requires screens including My Subjects, Class Student List, Student Academic View, Attendance Entry, Attendance History, Attendance Correction Request, Exam List, Marks Entry, Marks Submission, Assignment Details, Submission/Feedback View, Subject Performance, and Class Performance.
+2. My Classes Must Become a Real Class Workspace
+Currently, My Classes mainly provides class cards and an Attendance action. This needs to become a complete Class Workspace.
+When a teacher opens:
+Grade 10 – Section A
+the workspace should provide a clear overview containing:
+Class Teacher
+Total Students
+Today's Attendance
+Overall Attendance %
+Pending Assignments
+Upcoming Exams
+Academic Year
+Current Term
+Then provide contextual sections such as:
+Overview | Students | Attendance | Subjects | Assignments | Exams & Marks | Performance | Remarks
+The Stage 1 requirement specifically includes an assigned-class student list, class overview, attendance review, and permitted class remarks.
+Class Overview
+The overview should provide actionable information rather than simply repeat navigation.
+Include:
+Today's attendance
+Students absent today
+Attendance trend
+Upcoming assessments
+Pending marks
+Recent assignments
+Assignment submission completion
+Class academic performance
+Students requiring attention
+Recent class activity
+Useful contextual actions:
+Take Attendance
+Create Assignment
+Enter Marks
+Add Class Remark
+Only show actions that the current teacher is actually authorized to perform.
+3. Properly Support Class Teacher vs Subject Teacher
+This is one of the most important areas to implement correctly.
+The system must distinguish between:
+Subject Teacher
+A subject teacher operates within:
+Assigned Subject + Assigned Classes/Sections
+Class Teacher
+A class teacher additionally has an overall operational view of the assigned class.
+Teacher With Both Roles
+A teacher who is both should receive the union of their explicitly assigned scopes, not unrestricted access.
+This is consistent with the Stage 1 access rules.
+Class Teacher — All Subjects View
+For example, if a teacher teaches Mathematics and is also the Class Teacher for Grade 10-A, opening Grade 10-A should allow them to see the class's subjects:
+Mathematics
+English
+Physics
+Chemistry
+Biology
+Social Science
+etc.
+For each subject, show appropriate information such as:
+Subject teacher
+Recent assessment
+Class average
+Assignment status
+Performance trend
+Pending academic activity
+But:
+Viewing another subject must not automatically grant editing rights for that subject.
+For example:
+Mathematics→ View + permitted academic editing
+Physics→ Class-level overview/read access unless the teacher is separately assigned/authorized for Physics
+A Mathematics teacher must not be able to edit Physics marks simply because they are the class teacher.
+The authorization model must therefore drive both the UI and backend/API permissions.
+4. Build a Proper Class Student List
+Opening:
+Class → Students
+should display the complete authorized student list.
+Useful information:
+Student
+Roll Number
+Attendance %
+Academic Average
+Pending Assignments
+Recent Performance
+Status / Attention indicator
+Provide:
+Search
+Sort
+Filters
+Attendance filter
+Performance filter
+Status filter
+Clicking a student should open their Student Academic Profile.
+This directly addresses the required Class Student List and Student Academic View screens.
+5. Add a Detailed Student Academic Profile
+This is a major missing piece.
+A teacher should not simply see a student's name and basic information.
+Create a proper student academic workspace.
+Student Header
+Show:
+Student photo/avatar
+Student name
+Admission/Roll Number
+Class & Section
+Attendance %
+Academic Average
+Current academic status
+Then:
+Overview | Attendance | Academics | Assignments | Exams | Remarks
+Overview
+Show:
+Overall performance
+Attendance
+Assignments completed
+Assignments pending
+Recent assessments
+Performance trend
+Recent teacher remarks
+Attendance
+Show:
+Present count
+Absent count
+Late count
+Attendance percentage
+Monthly trend
+Attendance history
+Recent absences
+Leave/status information
+Academics
+Show performance by subject.
+Example:
+Mathematics — 84%Physics — 76%English — 88%
+Subject teachers should only have editing capability for subjects they are authorized to manage.
+Class teachers may receive the broader academic overview permitted by their role, without automatically receiving editing rights over another teacher's subject.
+Assignments
+Show:
+Assignment
+Subject
+Due Date
+Submission Status
+Score
+Feedback
+Exams
+Show:
+Examination
+Subject
+Marks
+Maximum Marks
+Percentage
+Status
+Remarks
+Provide authorized teachers/class teachers with the ability to add appropriate academic remarks where permitted.
+The Stage 1 data model explicitly allows AcademicRemark / TeacherRemark where approved.
+Do not expose unrelated or sensitive student information merely because the teacher can access the student profile.
+6. Attendance Needs a Complete Workflow
+Attendance should not end with an Attendance button.
+The workflow should be:
+Class → Attendance → Select Date/Period → Mark Students → Review → Submit
+Support at minimum:
+Present | Absent | Late | Configurable Statuses
+The specification requires attendance statuses, correction workflows, consistent attendance calculations, duplicate-submission prevention, and server-side teacher/class authorization.
+Add:
+Attendance Entry
+Attendance History
+Class Attendance Summary
+Student Attendance History
+Date filtering
+Period filtering where applicable
+Monthly statistics
+Absent student view
+Late student view
+Attendance Correction
+Historical attendance should not simply be overwritten.
+Provide:
+Request Correction
+The correction record should preserve:
+Original value
+Requested value
+Reason
+Requested by
+Requested time
+Approval status
+The correction must be traceable rather than silently changing the original attendance record.
+7. Assignments Need a Complete Workflow
+The current assignment cards are useful summaries, but the underlying workflow needs more depth.
+Creating an assignment should support:
+Title
+Class
+Subject
+Description/instructions
+Attachments
+Publish date
+Due date
+These are explicitly included in the Stage 1 assignment requirements.
+Clicking an assignment should open:
+Assignment Details
+with:
+Overview | Submissions | Feedback
+Submission Management
+Show individual student submission statuses such as:
+Submitted
+Pending
+Late
+Reviewed
+Provide aggregate information such as:
+15 / 32 Submitted17 Pending3 Late10 Reviewed
+The teacher should be able to open an individual submission and provide feedback where supported.
+This should become a real daily workflow rather than simply displaying submission counts.
+8. Exams & Marks Need a Proper Assessment Workflow
+The current Exams & Marks page primarily provides assessment cards.
+The workflow needs to become:
+Exam/Assessment → Class → Subject → Student Marks Entry
+A proper marks-entry screen should display the student roster and editable marks.
+Example:
+Student
+Marks
+Maximum
+Status
+Student A
+84
+100
+Valid
+Student B
+76
+100
+Valid
+Provide:
+Save Draft
+Validate
+Submit Marks
+Validation must prevent:
+Marks greater than maximum marks
+Invalid values
+Unauthorized subject/class edits
+The required workflow states are:
+Draft → Submitted → Verified/Published
+Once marks are submitted/published, normal editing should be restricted. Corrections should use an auditable workflow.
+Do not implement these merely as visual badges.
+The status must actually change what actions are permitted.
+9. Add My Subjects
+My Subjects is a required Stage 1 screen and should be added to the teacher experience.
+Example:
+Mathematics
+Grade 10-AGrade 10-B
+Physics
+Grade 11-Science
+Opening a subject should provide:
+Overview | Classes | Assignments | Assessments | Performance
+This is different from the Class Workspace.
+Class Workspace asks:
+What is happening with this class?
+Subject Workspace asks:
+What is happening with the classes in which I teach this subject?
+10. Add Class Performance and Subject Performance
+Academic reporting is currently underdeveloped.
+Class Performance
+Provide useful information such as:
+Class average
+Assessment performance
+Subject comparison where authorized
+Performance distribution
+Students improving
+Students declining
+Students requiring attention
+Subject Performance
+Provide:
+Average score
+Assessment comparison
+Class comparison
+Score distribution
+Student performance table
+Performance trend
+The objective is not to add charts simply for visual appeal.
+Every chart should answer a practical teacher question, such as:
+Which students are struggling?
+Is the class improving?
+Which assessment had unusually low performance?
+Which students need attention?
+The Stage 1 specification explicitly includes academic reports and class/subject performance summaries within teacher scope.
+11. Improve the Teacher Dashboard
+The current dashboard provides a clean starting point, but it should become a true daily teacher command center.
+The hierarchy should focus on:
+What does the teacher need to do today?
+Recommended structure:
+Welcome
+Welcome back, [Teacher Name]
+Today's date / academic period
+Quick Summary
+Today's Classes
+Attendance Pending
+Marks Pending
+Assignments to Review
+Today's Schedule
+Each class should provide a relevant contextual action:
+Take AttendanceOpen ClassView Class
+Avoid displaying repeated or inaccurate times simply for visual presentation. Schedule data should represent the actual underlying schedule.
+Requires Attention
+Examples:
+Grade 10-A attendance not submitted
+17 Algebra submissions pending review
+Mid-Term Mathematics marks still in Draft
+Attendance correction requests awaiting action
+Upcoming
+Upcoming assessments
+Assignment deadlines
+Scheduled classes
+The Stage 1 dashboard requirement specifically includes today's classes, attendance tasks, pending marks, assignments and relevant alerts.
+12. Professional UI/UX Revision
+The current interface has a clean foundation, but it should be refined to feel like a professional school operations product, rather than a basic dashboard/demo.
+Do not redesign everything unnecessarily. Improve the existing design system and information hierarchy.
+Reduce Oversized Components
+Cards and buttons currently consume more space than necessary.
+Actions such as:
+Attendance
+Review Pending
+Enter Marks
+do not always need to occupy almost the entire card width.
+Use clear action hierarchy:
+Primary Action → Filled brand buttonSecondary Action → Outline/neutral buttonNavigation/Details → Text/icon action
+Reduce Excessive Whitespace
+Desktop/tablet layouts should use available screen width more effectively.
+Avoid stacking everything into oversized single-column cards when the information can naturally be displayed in a two-column layout.
+Use:
+Summary cards for KPIs
+Tables for dense operational data
+Lists for repetitive records
+Cards for meaningful grouped information
+Reduce Excessive Rounded Styling
+The current design uses very large rounded corners across almost every component.
+Move toward a more restrained professional design language:
+Cards → moderate radius
+Buttons → moderate radius
+Inputs → moderate radius
+Status chips → pill shape
+The interface should feel polished rather than overly playful.
+Improve Typography Hierarchy
+Establish consistent levels for:
+Page title
+Section heading
+Card title
+Body text
+Metadata
+Caption
+Important information should have stronger visual priority than secondary metadata.
+Establish Consistent Semantic Colors
+Maintain the existing brand/accent direction but use colors consistently:
+Green → Completed / Published / HealthyAmber → Pending / AttentionRed → Overdue / Error / AbsentTeal/Brand Color → Primary action / InformationGrey → Inactive / Closed / Draft
+Avoid excessive use of bright colors.
+13. Improve Information Density
+A teacher needs to process a lot of academic information quickly.
+Not everything should be a large card.
+Use:
+Cards
+For:
+Dashboard summaries
+Class overview
+Student summary
+Assignment summary
+Tables
+For:
+Student lists
+Marks entry
+Assessment results
+Submission management
+Lists
+For:
+Schedule
+Notifications
+Activity
+Pending tasks
+Charts
+Only for:
+Performance trends
+Attendance trends
+Class/subject comparisons
+Distribution analysis
+This will significantly improve usability.
+14. Responsive Design Needs Improvement
+The teacher portal must be properly responsive.
+The desktop sidebar should not remain permanently expanded on a narrow mobile viewport.
+Implement:
+Desktop
+Persistent sidebar + content area.
+Tablet
+Compact/collapsible sidebar.
+Mobile
+Sidebar becomes a drawer/sheet triggered by a menu button.
+The main content should use almost the full mobile viewport.
+Do not simply shrink the desktop interface to fit a phone.
+Also ensure:
+Student tables work on mobile
+Marks entry works on mobile
+Attendance works on mobile
+Assignment review works on mobile
+Modals/drawers fit mobile screens
+Buttons remain accessible
+Text does not wrap awkwardly
+15. Permissions Must Drive Both UI and Backend
+Do not solve authorization simply by hiding buttons.
+The Stage 1 access model is:
+Class Teacher→ Assigned class academic/attendance scope
+Subject Teacher→ Assigned subject + assigned classes/sections
+Teacher with Both Roles→ Union of explicitly assigned scopes
+Unauthorized Teacher→ No access to unrelated classes, students, or subjects.
+The backend/API must enforce the same rules.
+For example:
+A Mathematics teacher must not be able to modify Physics marks by manually changing an ID in a request.
+The Stage 1 acceptance criteria explicitly require backend authorization testing for cross-class and cross-subject access.
+Therefore test:
+Cross-class access
+Cross-subject access
+Unauthorized student access
+Unauthorized marks modification
+Unauthorized attendance modification
+Unauthorized assignment creation
+Unauthorized assessment access
+16. Connect the Workflows Properly
+The portal should not feel like a collection of isolated screens.
+The expected navigation should feel like:
+Dashboard → Today's Class → Class Workspace → Student → Student Profile
+My Classes → Class → Attendance → Submit → Attendance History → Correction
+My Classes → Class → Students → Student Academic Profile
+My Subjects → Mathematics → Grade 10-A → Performance
+Assignments → Assignment → Submissions → Student → Feedback
+Exams & Marks → Assessment → Marks Entry → Draft → Submit → Published
+Class Teacher → Class → Subjects → Subject Summary → Students / Performance
+Every screen should provide logical next actions.
+The user should never have to return to the dashboard simply to continue a workflow that could naturally continue from the current screen.
+17. Add Proper Empty, Loading and Error States
+Every major module should have professionally designed states for:
+Loading
+Use appropriate skeleton/loading feedback.
+Empty
+For example:
+No assignments created for this class yet.
+with a relevant action where applicable.
+Error
+Show a meaningful explanation and recovery action.
+For example:
+Attendance could not be loaded.
+Try Again
+Success
+After actions such as:
+Attendance submitted
+Marks saved
+Assignment published
+Feedback submitted
+provide clear confirmation.
+Do not rely on browser alerts or ambiguous UI changes.
+18. Preserve Stage 1 Scope Boundaries
+While expanding the teacher portal, do not start building unrelated school ERP modules.
+Stage 1 explicitly excludes:
+Fee configuration
+Payment processing
+Financial reports
+School-wide user/role administration
+HR/salary management
+Parent/student mobile application
+Maintenance/repair
+Transport
+Library
+School-wide administrative dashboard
+The goal is to make the teacher academic subsystem complete, not to expand into unrelated modules.
+19. Follow the Existing Data/API Boundaries
+Student, class, section, subject, and teacher-assignment information should be consumed from the agreed foundation APIs.
+Do not:
+Duplicate student master records
+Create another user/role system
+Directly modify another package's tables where an API exists
+Bypass established APIs
+The Stage 1 document specifically establishes these integration and independence rules.
+20. End-to-End Workflow Validation
+Before considering the implementation complete, verify the entire teacher journey.
+A teacher should be able to:
+Login
+↓
+Understand today's work
+↓
+Open an assigned class
+↓
+View the class overview
+↓
+View students
+↓
+Open a student's academic profile
+↓
+Take attendance
+↓
+Submit attendance
+↓
+Review attendance history
+↓
+Request an attendance correction when necessary
+↓
+Open their subject
+↓
+Create an assignment
+↓
+View student submissions
+↓
+Provide feedback
+↓
+Open an assessment
+↓
+Enter valid marks
+↓
+Save as Draft
+↓
+Validate
+↓
+Submit marks
+↓
+See editing become restricted after submission
+↓
+View class/subject performance
+This complete workflow should work without broken navigation, placeholder actions, dead buttons, or disconnected screens.
+21. Class Teacher End-to-End Validation
+Test the Class Teacher role separately.
+A Class Teacher should be able to:
+Open Assigned Class
+→ View class overview→ View authorized student list→ View attendance→ Manage permitted attendance operations→ View all subjects associated with the class→ View subject-level academic summaries→ View class performance→ View student academic profiles→ Add permitted class/academic remarks→ View assignments and assessments relevant to the class
+At the same time:
+Class Teacher access must not automatically become unrestricted subject-teacher access.
+If the teacher is not assigned to Physics, for example, they should not automatically receive permission to edit Physics marks merely because they are the Class Teacher.
+22. Final Acceptance Criteria
+The implementation should not be considered complete until the following are verified:
+Teacher authentication works
+Teacher profile works
+Assigned classes are correctly displayed
+Assigned subjects are correctly displayed
+My Classes works as a complete class workspace
+My Subjects works as a complete subject workspace
+Class student list works
+Student Academic Profile works
+Attendance entry works
+Attendance history works
+Attendance correction workflow works
+Duplicate attendance submissions are prevented
+Assignment creation works
+Assignment details work
+Assignment submissions can be reviewed
+Assignment feedback works where supported
+Exam/assessment listing works
+Marks entry works
+Marks validation works
+Draft/Submitted/Verified/Published workflow is enforced
+Marks corrections are auditable
+Class performance works
+Subject performance works
+Dashboard shows relevant daily tasks
+Class Teacher functionality works separately
+Subject Teacher functionality works separately
+Combined Class + Subject Teacher permissions work correctly
+Unauthorized class access is blocked
+Unauthorized student access is blocked
+Unauthorized subject access is blocked
+Unauthorized marks modification is blocked
+Backend authorization is tested
+Loading states are implemented
+Empty states are implemented
+Error states are implemented
+Success feedback is implemented
+Desktop UI is professional
+Tablet UI is responsive
+Mobile UI is properly responsive
+No major dead/placeholder buttons remain
+Navigation is logically connected
+Existing foundation APIs/data boundaries are respected
+No out-of-scope Stage 1 modules are introduced
+The Stage 1 acceptance criteria also require that teachers see only their assigned classes/subjects, class teachers can access their permitted student lists, attendance works without duplicates, marks are validated and protected through workflow states, assignments are restricted to authorized classes/subjects, the dashboard shows relevant tasks, and backend authorization tests prove cross-class/cross-subject access is denied.
+Expected Final Outcome
+The final Teacher Portal should not feel like four separate dashboard pages.
+It should feel like a single, connected Teacher Academic Operations Workspace where a teacher can perform their complete daily work:
+See what needs attention → open the relevant class/subject → work with students → take attendance → manage assignments → conduct assessments → enter/submit marks → review performance → handle permitted corrections and remarks.
+The priority is functional completeness + clear workflows + correct role permissions + professional UI/UX + responsive design.
+Please treat the existing implementation as a foundation and complete/refine it rather than simply adding more static screens.

@@ -83,7 +83,10 @@ export default function StudentProfilePage() {
   return (
     <div>
       <PageHeader title={`Student profile — ${student.admissionNumber}`} description="Update the student record, enrollment, guardians, and documents." />
-      {returnTo && <p className="breadcrumb"><Link to={returnTo}>Back to section students</Link></p>}
+      {returnTo && <p className="breadcrumb"><Link to={returnTo}>
+        {returnTo.startsWith("/staff/") ? "Back to teacher profile"
+          : returnTo.startsWith("/guardians/") ? "Back to guardian details" : "Back to section students"}
+      </Link></p>}
       {error && <p className="error">{error}</p>}
       <div className="tabs" role="tablist">
         {[["overview", "Overview"], ["academic", "Academic"], ["guardians", "Guardians"], ["documents", "Documents"]].map(([value, label]) => (

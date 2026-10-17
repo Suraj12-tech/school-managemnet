@@ -15,8 +15,6 @@ import com.schoolenterprise.academics.entity.SchoolClass;
 import com.schoolenterprise.academics.entity.Section;
 import com.schoolenterprise.academics.repository.SchoolClassRepository;
 import com.schoolenterprise.academics.repository.SectionRepository;
-import com.schoolenterprise.staff.entity.Staff;
-import com.schoolenterprise.staff.repository.StaffRepository;
 import com.schoolenterprise.student.entity.ClassHistory;
 import com.schoolenterprise.student.entity.Enrollment;
 import com.schoolenterprise.student.entity.Guardian;
@@ -27,6 +25,10 @@ import com.schoolenterprise.student.repository.EnrollmentRepository;
 import com.schoolenterprise.student.repository.GuardianRepository;
 import com.schoolenterprise.student.repository.StudentGuardianRepository;
 import com.schoolenterprise.student.repository.StudentRepository;
+import com.schoolenterprise.staff.entity.Staff;
+import com.schoolenterprise.staff.entity.TeacherAssignment;
+import com.schoolenterprise.staff.repository.StaffRepository;
+import com.schoolenterprise.staff.repository.TeacherAssignmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +44,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Creates demo school + admin user the first time the app starts.
- * Login: admin / Admin@123
+ * Creates demo school users and workflow data the first time the app starts.
+ * Logins: admin / Admin@123, teacher / Teacher@123
  */
 @Component
 @RequiredArgsConstructor
@@ -66,11 +68,12 @@ public class DataSeeder implements CommandLineRunner {
     private final SchoolClassRepository classRepository;
     private final SectionRepository sectionRepository;
     private final StudentRepository studentRepository;
+    private final StaffRepository staffRepository;
+    private final TeacherAssignmentRepository teacherAssignmentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ClassHistoryRepository classHistoryRepository;
     private final GuardianRepository guardianRepository;
     private final StudentGuardianRepository studentGuardianRepository;
-    private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -91,8 +94,9 @@ public class DataSeeder implements CommandLineRunner {
 
         seedDemoUser("accountant", "accountant@school.local", "Accountant User", "Accountant@123", accountant, school.getId(), "SCHOOL");
         seedDemoUser("teacher", "teacher@school.local", "Class Teacher", "Teacher@123", classTeacher, null, null);
-        seedTeacherStaff();
         seedDemoClassesAndStudents(school, academicYear);
+        userRepository.findByUsername("teacher")
+                .ifPresent(teacher -> ensureDemoTeacherWorkflow(teacher, school, academicYear));
         seedDemoPromotionData(school, academicYear);
 
         if (userRepository.findByUsername("admin").isEmpty()) {
@@ -271,22 +275,6 @@ public class DataSeeder implements CommandLineRunner {
         log.info("Created demo user {} / {}", username, password);
     }
 
-    private void seedTeacherStaff() {
-        AppUser teacher = userRepository.findByUsername("teacher").orElse(null);
-        if (teacher == null || staffRepository.findByUserId(teacher.getId()).isPresent()) {
-            return;
-        }
-        Staff staff = new Staff();
-        staff.setUserId(teacher.getId());
-        staff.setEmployeeId("EMP-T001");
-        staff.setFullName(teacher.getFullName());
-        staff.setDesignation("Class Teacher");
-        staff.setEmail(teacher.getEmail());
-        staff.setStatus("ACTIVE");
-        staffRepository.save(staff);
-        log.info("Linked demo teacher user to staff EMP-T001");
-    }
-
     private School seedSchool() {
         return schoolRepository.findAll().stream().findFirst().orElseGet(() -> {
             School school = new School();
@@ -390,6 +378,7 @@ public class DataSeeder implements CommandLineRunner {
         if (student != null) {
             return;
         }
+
         int number = Integer.parseInt(assignment[2].substring(4));
         student = new Student();
         student.setAdmissionNumber(assignment[2]);
@@ -436,6 +425,87 @@ public class DataSeeder implements CommandLineRunner {
         link.setPrimaryGuardian(true);
         link.setEmergencyContact(true);
         studentGuardianRepository.save(link);
+    }
+
+    private void ensureDemoTeacherWorkflow(AppUser teacher, School school, AcademicYear year) {
+        List<Staff> linkedStaff = staffRepository.findAllByUserId(teacher.getId());
+        Staff staff;
+        if (linkedStaff.isEmpty()) {
+            staff = new Staff();
+            staff.setUserId(teacher.getId());
+            staff.setEmployeeId("DEMO-TEACHER-" + teacher.getId());
+            staff.setFullName(teacher.getFullName());
+            staff.setEmail(teacher.getEmail());
+            staff.setStatus("ACTIVE");
+            staff.setStaffCategory("TEACHING");
+            staff = staffRepository.save(staff);
+        } else if (linkedStaff.size() == 1) {
+            staff = linkedStaff.get(0);
+            if ("EMP-T001".equals(staff.getEmployeeId())
+                    && "Class Teacher".equalsIgnoreCase(staff.getDesignation())
+                    && "ACTIVE".equals(staff.getStatus())
+                    && staff.getStaffCategory() == null) {
+                staff.setStaffCategory("TEACHING");
+                staff = staffRepository.save(staff);
+            }
+        } else {
+            log.warn("Skipped demo teacher assignment: teacher account is linked to multiple Staff records");
+            return;
+        }
+
+        if (!"ACTIVE".equals(staff.getStatus()) || !"TEACHING".equals(staff.getStaffCategory())) {
+            log.warn("Skipped demo teacher assignment: linked Staff record is not an active teaching staff member");
+            return;
+        }
+
+        SchoolClass demoClass = classRepository.findBySchoolId(school.getId()).stream()
+                .filter(item -> "Class 6".equalsIgnoreCase(item.getName()))
+                .findFirst()
+                .orElse(null);
+        if (demoClass == null) {
+            log.warn("Skipped demo teacher assignment: Class 6 was not found");
+            return;
+        }
+
+        Section demoSection = sectionRepository.findByClassId(demoClass.getId()).stream()
+                .filter(section -> year.getId().equals(section.getAcademicYearId())
+                        && "A".equalsIgnoreCase(section.getName()))
+                .findFirst()
+                .orElse(null);
+        if (demoSection == null) {
+            log.warn("Skipped demo teacher assignment: Class 6 Section A was not found for {}", year.getName());
+            return;
+        }
+        if (demoSection.getClassTeacherStaffId() != null
+                && !demoSection.getClassTeacherStaffId().equals(staff.getId())) {
+            log.warn("Skipped demo teacher assignment: Class 6 Section A already has a class teacher");
+            return;
+        }
+
+        if (!staff.getId().equals(demoSection.getClassTeacherStaffId())) {
+            demoSection.setClassTeacherStaffId(staff.getId());
+            sectionRepository.save(demoSection);
+        }
+
+        Long staffId = staff.getId();
+        boolean assignmentExists = teacherAssignmentRepository.findByStaffId(staffId).stream()
+                .anyMatch(assignment -> staffId.equals(assignment.getStaffId())
+                        && demoClass.getId().equals(assignment.getClassId())
+                        && demoSection.getId().equals(assignment.getSectionId())
+                        && year.getId().equals(assignment.getAcademicYearId())
+                        && "CLASS_TEACHER".equals(assignment.getAssignmentType()));
+        if (!assignmentExists) {
+            TeacherAssignment assignment = new TeacherAssignment();
+            assignment.setStaffId(staff.getId());
+            assignment.setClassId(demoClass.getId());
+            assignment.setSectionId(demoSection.getId());
+            assignment.setAcademicYearId(year.getId());
+            assignment.setAssignmentType("CLASS_TEACHER");
+            assignment.setStatus("ACTIVE");
+            teacherAssignmentRepository.save(assignment);
+        }
+
+        log.info("Ensured demo teacher assignment for Class 6 Section A in {}", year.getName());
     }
 
     private void seedDemoPromotionData(School school, AcademicYear sourceYear) {

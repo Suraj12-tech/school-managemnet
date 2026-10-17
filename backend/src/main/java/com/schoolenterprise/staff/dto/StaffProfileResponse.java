@@ -24,9 +24,12 @@ public class StaffProfileResponse extends StaffResponse {
         private final String sectionName;
         private final Long academicYearId;
         private final String academicYearName;
+        private final String assignmentType;
+        private final String status;
 
         public AssignmentResponse(Long id, Long subjectId, String subjectName, Long classId, String className,
-                                  Long sectionId, String sectionName, Long academicYearId, String academicYearName) {
+                                  Long sectionId, String sectionName, Long academicYearId, String academicYearName,
+                                  String assignmentType, String status) {
             this.id = id;
             this.subjectId = subjectId;
             this.subjectName = subjectName;
@@ -36,6 +39,8 @@ public class StaffProfileResponse extends StaffResponse {
             this.sectionName = sectionName;
             this.academicYearId = academicYearId;
             this.academicYearName = academicYearName;
+            this.assignmentType = assignmentType;
+            this.status = status;
         }
     }
 }

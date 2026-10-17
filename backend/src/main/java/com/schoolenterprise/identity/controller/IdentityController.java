@@ -2,9 +2,12 @@ package com.schoolenterprise.identity.controller;
 
 import com.schoolenterprise.common.api.ApiResponse;
 import com.schoolenterprise.common.security.RequirePermission;
+import com.schoolenterprise.common.security.ExcludeTeacherRoles;
 import com.schoolenterprise.identity.dto.UserRequest;
 import com.schoolenterprise.identity.dto.UserResponse;
 import com.schoolenterprise.identity.dto.UserStatusRequest;
+import com.schoolenterprise.identity.dto.StaffLinkOption;
+import com.schoolenterprise.identity.dto.StaffLinkRequest;
 import com.schoolenterprise.identity.entity.AppUser;
 import com.schoolenterprise.identity.entity.Permission;
 import com.schoolenterprise.identity.entity.Role;
@@ -19,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@ExcludeTeacherRoles
 public class IdentityController {
 
     private final IdentityService identityService;
@@ -53,6 +57,26 @@ public class IdentityController {
                                                    @Valid @RequestBody UserStatusRequest request) {
         return ApiResponse.ok("User status updated",
                 UserResponse.from(identityService.updateStatus(id, request)));
+    }
+
+    @GetMapping("/users/teacher-staff-options")
+    @RequirePermission(module = "users", action = "view")
+    public ApiResponse<List<StaffLinkOption>> teacherStaffOptions() {
+        return ApiResponse.ok(identityService.teacherStaffOptions());
+    }
+
+    @PutMapping("/users/{id}/staff-link")
+    @RequirePermission(module = "users", action = "edit")
+    public ApiResponse<Void> linkStaff(@PathVariable Long id, @Valid @RequestBody StaffLinkRequest request) {
+        identityService.linkStaff(id, request.getStaffId());
+        return ApiResponse.ok("Staff linked", null);
+    }
+
+    @DeleteMapping("/users/{id}/staff-link")
+    @RequirePermission(module = "users", action = "edit")
+    public ApiResponse<Void> unlinkStaff(@PathVariable Long id) {
+        identityService.unlinkStaff(id);
+        return ApiResponse.ok("Staff unlinked", null);
     }
 
     @GetMapping("/roles")

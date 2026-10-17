@@ -152,10 +152,15 @@ public class StudentService {
         return saved;
     }
 
-    public GuardianDetailsResponse guardianDetails(Long id) {
+    public GuardianDetailsResponse guardianDetails(Long id, Long academicYearId) {
         Guardian guardian = guardian(id);
+        if (academicYearId != null) {
+            permissionService.assertYearAccess(academicYearId);
+            academicYearRepository.findById(academicYearId)
+                    .orElseThrow(() -> AppException.notFound("Academic year not found"));
+        }
         List<LinkedStudentResponse> students = studentGuardianRepository.findByGuardianId(id).stream()
-                .map(this::linkedStudent)
+                .map(link -> linkedStudent(link, academicYearId))
                 .filter(java.util.Objects::nonNull)
                 .toList();
         if (!permissionService.hasSchoolWideAccess() && students.isEmpty()) {
@@ -192,10 +197,15 @@ public class StudentService {
         return studentGuardianRepository.findByStudentId(studentId).stream().map(this::toLinkResponse).toList();
     }
 
-    public List<LinkedStudentResponse> guardianStudents(Long guardianId) {
+    public List<LinkedStudentResponse> guardianStudents(Long guardianId, Long academicYearId) {
         guardian(guardianId);
+        if (academicYearId != null) {
+            permissionService.assertYearAccess(academicYearId);
+            academicYearRepository.findById(academicYearId)
+                    .orElseThrow(() -> AppException.notFound("Academic year not found"));
+        }
         return studentGuardianRepository.findByGuardianId(guardianId).stream()
-                .map(this::linkedStudent)
+                .map(link -> linkedStudent(link, academicYearId))
                 .filter(java.util.Objects::nonNull)
                 .toList();
     }
@@ -389,10 +399,60 @@ public class StudentService {
             }
             throw ex;
         }
+        return linkedStudentResponse(link, student, currentEnrollment(student), false);
+    }
+
+    private LinkedStudentResponse linkedStudent(StudentGuardian link, Long academicYearId) {
+        if (academicYearId == null) {
+            return linkedStudent(link);
+        }
+        Student student;
+        try {
+            student = studentRepository.findById(link.getStudentId())
+                    .orElseThrow(() -> AppException.notFound("Student not found"));
+            Enrollment enrollment = enrollmentRepository.findByStudentId(student.getId()).stream()
+                    .filter(item -> academicYearId.equals(item.getAcademicYearId()))
+                    .filter(item -> sectionRepository.findById(item.getSectionId())
+                            .map(section -> academicYearId.equals(section.getAcademicYearId()))
+                            .orElse(false))
+                    .sorted((first, second) -> Boolean.compare(
+                            !"ENROLLED".equalsIgnoreCase(first.getStatus()),
+                            !"ENROLLED".equalsIgnoreCase(second.getStatus())))
+                    .findFirst()
+                    .orElse(null);
+            if (enrollment != null) {
+                permissionService.assertStudent(student.getId(), enrollment.getSectionId());
+            } else {
+                permissionService.assertStudent(student.getId(), student.getCurrentSectionId());
+            }
+            return linkedStudentResponse(link, student, enrollment, true);
+        } catch (AppException ex) {
+            if (ex.getStatus().is4xxClientError()) {
+                return null;
+            }
+            throw ex;
+        }
+    }
+
+    private Enrollment currentEnrollment(Student student) {
+        if (student.getCurrentSectionId() == null) {
+            return null;
+        }
+        return enrollmentRepository.findByStudentId(student.getId()).stream()
+                .filter(item -> student.getCurrentSectionId().equals(item.getSectionId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private LinkedStudentResponse linkedStudentResponse(
+            StudentGuardian link, Student student, Enrollment enrollment, boolean academicYearFiltered) {
         String className = null;
         String sectionName = null;
-        if (student.getCurrentSectionId() != null) {
-            Section section = sectionRepository.findById(student.getCurrentSectionId()).orElse(null);
+        Long sectionId = academicYearFiltered
+                ? enrollment == null ? null : enrollment.getSectionId()
+                : student.getCurrentSectionId();
+        if (sectionId != null) {
+            Section section = sectionRepository.findById(sectionId).orElse(null);
             if (section != null) {
                 sectionName = section.getName();
                 if (section.getClassId() != null) {
@@ -402,7 +462,8 @@ public class StudentService {
         }
         return new LinkedStudentResponse(student.getId(), student.getFirstName() + " " + student.getLastName(),
                 student.getAdmissionNumber(), className, sectionName, link.getRelationshipType(),
-                link.isPrimaryGuardian(), link.isEmergencyContact());
+                link.isPrimaryGuardian(), link.isEmergencyContact(), student.getStatus(),
+                enrollment == null ? null : enrollment.getStatus());
     }
 
     private String sectionClassName(Long classId) {

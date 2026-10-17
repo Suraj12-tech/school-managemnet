@@ -2,6 +2,7 @@ package com.schoolenterprise.staff.controller;
 
 import com.schoolenterprise.common.api.ApiResponse;
 import com.schoolenterprise.common.security.RequirePermission;
+import com.schoolenterprise.common.security.ExcludeTeacherRoles;
 import com.schoolenterprise.staff.entity.Staff;
 import com.schoolenterprise.staff.entity.TeacherAssignment;
 import com.schoolenterprise.staff.dto.*;
@@ -16,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@ExcludeTeacherRoles
 public class StaffController {
 
     private final StaffService staffService;
@@ -32,10 +34,18 @@ public class StaffController {
         return ApiResponse.ok(staffService.profile(id));
     }
 
+    @GetMapping("/staff/{id}/summary")
+    @RequirePermission(module = "staff", action = "view")
+    public ApiResponse<StaffResponse> summary(@PathVariable Long id) {
+        return ApiResponse.ok(staffService.summary(id));
+    }
+
     @GetMapping("/staff/{id}/assignments")
     @RequirePermission(module = "staff", action = "view")
-    public ApiResponse<List<StaffProfileResponse.AssignmentResponse>> staffAssignments(@PathVariable Long id) {
-        return ApiResponse.ok(staffService.profile(id).getAssignments());
+    public ApiResponse<List<StaffProfileResponse.AssignmentResponse>> staffAssignments(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long academicYearId) {
+        return ApiResponse.ok(staffService.assignments(id, academicYearId));
     }
 
     @PostMapping("/staff")

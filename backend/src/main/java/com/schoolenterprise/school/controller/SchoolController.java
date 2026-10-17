@@ -1,6 +1,7 @@
 package com.schoolenterprise.school.controller;
 
 import com.schoolenterprise.common.api.ApiResponse;
+import com.schoolenterprise.common.security.ExcludeTeacherRoles;
 import com.schoolenterprise.common.security.RequirePermission;
 import com.schoolenterprise.school.dto.AcademicYearRequest;
 import com.schoolenterprise.school.dto.CalendarEventRequest;
@@ -21,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@ExcludeTeacherRoles
 public class SchoolController {
 
     private final SchoolService schoolService;

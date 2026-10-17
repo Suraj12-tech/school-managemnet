@@ -19,10 +19,13 @@ import com.schoolenterprise.academics.dto.SubjectRequest;
 import com.schoolenterprise.academics.dto.SubjectSummary;
 import com.schoolenterprise.academics.dto.TimetableEntryRequest;
 import com.schoolenterprise.academics.dto.TimetableEntryResponse;
+import com.schoolenterprise.academics.dto.TimetableWorkingDaysRequest;
+import com.schoolenterprise.academics.dto.TimetableWorkingDaysResponse;
 import com.schoolenterprise.school.dto.StatusRequest;
 import com.schoolenterprise.academics.service.AcademicsService;
 import com.schoolenterprise.common.api.ApiResponse;
 import com.schoolenterprise.common.security.RequirePermission;
+import com.schoolenterprise.common.security.ExcludeTeacherRoles;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +35,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@ExcludeTeacherRoles
 public class AcademicsController {
 
     private final AcademicsService academicsService;
@@ -211,6 +215,19 @@ public class AcademicsController {
     }
 
     // ================= Timetable Endpoints =================
+
+    @GetMapping("/timetable/working-days")
+    @RequirePermission(module = "classes", action = "view")
+    public ApiResponse<TimetableWorkingDaysResponse> timetableWorkingDays() {
+        return ApiResponse.ok(academicsService.timetableWorkingDays());
+    }
+
+    @PutMapping("/timetable/working-days")
+    @RequirePermission(module = "classes", action = "edit")
+    public ApiResponse<TimetableWorkingDaysResponse> replaceTimetableWorkingDays(
+            @Valid @RequestBody TimetableWorkingDaysRequest request) {
+        return ApiResponse.ok(academicsService.replaceTimetableWorkingDays(request));
+    }
 
     @GetMapping("/timetable")
     @RequirePermission(module = "classes", action = "view")

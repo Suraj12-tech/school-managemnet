@@ -24,4 +24,6 @@ public class Staff {
     private String phone;
     private String email;
     private String status = "ACTIVE";
+    @Column(name = "staff_category", length = 20)
+    private String staffCategory;
 }

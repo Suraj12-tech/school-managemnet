@@ -13,8 +13,12 @@ public class InvoiceResponse {
     private String invoiceNumber;
     private Long studentId;
     private String student;
+    private Long classId;
     private String className;
+    private Long sectionId;
     private String sectionName;
+    private Long academicYearId;
+    private String academicYear;
     private Long feeStructureId;
     private String feeStructure;
     private BigDecimal totalAmount;

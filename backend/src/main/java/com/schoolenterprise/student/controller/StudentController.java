@@ -2,6 +2,7 @@ package com.schoolenterprise.student.controller;
 
 import com.schoolenterprise.common.api.ApiResponse;
 import com.schoolenterprise.common.security.RequirePermission;
+import com.schoolenterprise.common.security.ExcludeTeacherRoles;
 import com.schoolenterprise.student.dto.*;
 import com.schoolenterprise.student.entity.*;
 import com.schoolenterprise.student.service.StudentService;
@@ -17,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@ExcludeTeacherRoles
 public class StudentController {
 
     private final StudentService studentService;
@@ -61,8 +63,10 @@ public class StudentController {
 
     @GetMapping("/guardians/{id}")
     @RequirePermission(module = "students", action = "view")
-    public ApiResponse<GuardianDetailsResponse> guardian(@PathVariable Long id) {
-        return ApiResponse.ok(studentService.guardianDetails(id));
+    public ApiResponse<GuardianDetailsResponse> guardian(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long academicYearId) {
+        return ApiResponse.ok(studentService.guardianDetails(id, academicYearId));
     }
 
     @PostMapping("/guardians")
@@ -86,8 +90,10 @@ public class StudentController {
 
     @GetMapping("/guardians/{id}/students")
     @RequirePermission(module = "students", action = "view")
-    public ApiResponse<List<LinkedStudentResponse>> guardianStudents(@PathVariable Long id) {
-        return ApiResponse.ok(studentService.guardianStudents(id));
+    public ApiResponse<List<LinkedStudentResponse>> guardianStudents(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long academicYearId) {
+        return ApiResponse.ok(studentService.guardianStudents(id, academicYearId));
     }
 
     @PostMapping("/students/{id}/guardians")

@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { getLoginErrorMessage } from "../auth/loginError.js";
 import PasswordField from "../components/PasswordField.jsx";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState("");
@@ -24,10 +25,16 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      await login(username, password);
+      const user = await login(username, password);
+      const roles = Array.isArray(user.roles) ? user.roles : [];
+      if (!roles.includes("ADMIN") && roles.some((role) => role === "CLASS_TEACHER" || role === "SUBJECT_TEACHER")) {
+        await logout();
+        setError("This is a teacher account. Please sign in through the Teacher Portal.");
+        return;
+      }
       navigate("/");
     } catch (err) {
-      setError(err.message);
+      setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }

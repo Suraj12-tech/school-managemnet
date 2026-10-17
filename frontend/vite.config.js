@@ -4,13 +4,21 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: "0.0.0.0",
     port: 5173,
     proxy: {
       "/api": "http://localhost:8080",
       "/v3": "http://localhost:8080",
       "/swagger-ui": "http://localhost:8080"
-    }, allowedHosts: [
-      'figures-sydney-montgomery-mask.trycloudflare.com'
+    },
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      ".trycloudflare.com"
     ]
+  },
+  preview: {
+    host: "0.0.0.0",
+    port: 4173
   }
 });

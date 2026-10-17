@@ -4,8 +4,11 @@ import com.schoolenterprise.audit.service.AuditService;
 import com.schoolenterprise.academics.repository.SectionRepository;
 import com.schoolenterprise.academics.repository.SchoolClassRepository;
 import com.schoolenterprise.academics.repository.SubjectRepository;
+import com.schoolenterprise.auth.entity.LoginSession;
+import com.schoolenterprise.auth.repository.LoginSessionRepository;
 import com.schoolenterprise.common.exception.AppException;
 import com.schoolenterprise.common.security.PermissionService;
+import com.schoolenterprise.identity.dto.StaffLinkOption;
 import com.schoolenterprise.identity.dto.UserRequest;
 import com.schoolenterprise.identity.dto.UserStatusRequest;
 import com.schoolenterprise.identity.entity.AppUser;
@@ -17,6 +20,8 @@ import com.schoolenterprise.identity.repository.RoleRepository;
 import com.schoolenterprise.identity.repository.UserScopeRepository;
 import com.schoolenterprise.school.repository.CampusRepository;
 import com.schoolenterprise.school.repository.SchoolRepository;
+import com.schoolenterprise.staff.entity.Staff;
+import com.schoolenterprise.staff.repository.StaffRepository;
 import com.schoolenterprise.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +49,8 @@ public class IdentityService {
     private final SectionRepository sectionRepository;
     private final SubjectRepository subjectRepository;
     private final StudentRepository studentRepository;
+    private final StaffRepository staffRepository;
+    private final LoginSessionRepository loginSessionRepository;
 
     @Transactional(readOnly = true)
     public List<AppUser> users() {
@@ -85,7 +92,14 @@ public class IdentityService {
 
     @Transactional
     public AppUser updateUser(Long id, UserRequest req) {
-        AppUser user = getUser(id);
+        AppUser user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> AppException.notFound("User not found"));
+        user.getRoles().size();
+        user.getScopes().size();
+        if (permissionService.currentUser().getUserId().equals(id)
+                && "INACTIVE".equals(req.getStatus())) {
+            throw AppException.badRequest("You cannot deactivate your own account");
+        }
         String username = req.getUsername().trim();
         String email = req.getEmail().trim().toLowerCase();
         if (userRepository.existsByUsernameAndIdNot(username, id)) {
@@ -96,21 +110,104 @@ public class IdentityService {
         }
         apply(user, req, false);
         AppUser saved = userRepository.save(user);
+        if ("INACTIVE".equals(saved.getStatus())) {
+            revokeSessions(saved.getId());
+        }
         auditService.record("users", "edit", "AppUser", saved.getId(), saved.getUsername());
         return saved;
     }
 
     @Transactional
     public AppUser updateStatus(Long id, UserStatusRequest request) {
-        AppUser user = getUser(id);
+        AppUser user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> AppException.notFound("User not found"));
+        user.getRoles().size();
+        user.getScopes().size();
         if (permissionService.currentUser().getUserId().equals(id)
                 && "INACTIVE".equals(request.getStatus())) {
             throw AppException.badRequest("You cannot deactivate your own account");
         }
         user.setStatus(request.getStatus());
         AppUser saved = userRepository.save(user);
+        if ("INACTIVE".equals(saved.getStatus())) {
+            revokeSessions(saved.getId());
+        }
         auditService.record("users", "edit", "AppUser", saved.getId(), "Status " + saved.getStatus());
         return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public List<StaffLinkOption> teacherStaffOptions() {
+        return staffRepository.findAll().stream().map(StaffLinkOption::new).toList();
+    }
+
+    @Transactional
+    public void linkStaff(Long userId, Long staffId) {
+        AppUser user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> AppException.notFound("User not found"));
+        List<Staff> currentLinks = staffRepository.findAllByUserId(userId);
+        if (currentLinks.size() > 1) {
+            throw AppException.conflict("Multiple Staff links exist for this user; an Admin must resolve them before changing the link");
+        }
+
+        Staff target = staffRepository.findByIdForUpdate(staffId)
+                .orElseThrow(() -> AppException.notFound("Staff not found"));
+        if (currentLinks.size() == 1 && currentLinks.get(0).getId().equals(staffId)) {
+            if (!userId.equals(target.getUserId())) {
+                throw AppException.conflict("Staff link data is inconsistent and requires Admin review");
+            }
+            return;
+        }
+        if (!"ACTIVE".equals(target.getStatus()) || !"TEACHING".equals(target.getStaffCategory())) {
+            throw AppException.badRequest("Only ACTIVE Staff categorized as TEACHING can be linked to a teacher account");
+        }
+        if (target.getUserId() != null && !userId.equals(target.getUserId())) {
+            throw AppException.conflict("Staff is already linked to another user");
+        }
+        if (target.getUserId() != null && currentLinks.isEmpty()) {
+            throw AppException.conflict("Staff link data is inconsistent and requires Admin review");
+        }
+
+        Staff previous = null;
+        if (!currentLinks.isEmpty()) {
+            previous = staffRepository.findByIdForUpdate(currentLinks.get(0).getId())
+                    .orElseThrow(() -> AppException.conflict("Existing Staff link requires Admin review"));
+            if (!userId.equals(previous.getUserId())) {
+                throw AppException.conflict("Staff link data changed during the request; reload and try again");
+            }
+            previous.setUserId(null);
+            staffRepository.save(previous);
+        }
+
+        target.setUserId(userId);
+        staffRepository.save(target);
+        revokeSessions(userId);
+        String previousId = previous == null ? "none" : previous.getId().toString();
+        auditService.record("users", "edit", "AppUser", user.getId(),
+                "Staff link changed from " + previousId + " to " + target.getId());
+    }
+
+    @Transactional
+    public void unlinkStaff(Long userId) {
+        AppUser user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> AppException.notFound("User not found"));
+        List<Staff> currentLinks = staffRepository.findAllByUserId(userId);
+        if (currentLinks.size() > 1) {
+            throw AppException.conflict("Multiple Staff links exist for this user; an Admin must resolve them before unlinking");
+        }
+        if (currentLinks.isEmpty()) {
+            return;
+        }
+        Staff linked = staffRepository.findByIdForUpdate(currentLinks.get(0).getId())
+                .orElseThrow(() -> AppException.conflict("Existing Staff link requires Admin review"));
+        if (!userId.equals(linked.getUserId())) {
+            throw AppException.conflict("Staff link data changed during the request; reload and try again");
+        }
+        linked.setUserId(null);
+        staffRepository.save(linked);
+        revokeSessions(userId);
+        auditService.record("users", "edit", "AppUser", user.getId(),
+                "Staff " + linked.getId() + " unlinked");
     }
 
     @Transactional(readOnly = true)
@@ -186,6 +283,12 @@ public class IdentityService {
             throw AppException.badRequest("One or more roles were not found");
         }
         return roles;
+    }
+
+    private void revokeSessions(Long userId) {
+        List<LoginSession> activeSessions = loginSessionRepository.findByUserIdAndRevokedFalse(userId);
+        activeSessions.forEach(session -> session.setRevoked(true));
+        loginSessionRepository.saveAll(activeSessions);
     }
 
     private void validateScope(String scopeType, Long scopeId) {

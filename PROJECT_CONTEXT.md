@@ -75,6 +75,16 @@ Default demo login: `admin` / `Admin@123`
 - Stages after 1: attendance, timetable, exams, report cards, communication, etc.
 - Production secrets management (local database and SMTP credentials stay in ignored properties/environment variables).
 
+## Approved integration scope (additional to the historical Stage 1 spec)
+
+The following platform work was approved on 2026-10-16 as follow-up integration scope. It does not retroactively change the acceptance scope of the original Stage 1 source specification:
+
+- Admin assessment authoring: create, edit, publish, and unpublish assessments.
+- Weekly class/section timetable entries including subject, teacher, room, and period.
+- Teacher mark entry limited to authorized assessment/class assignments; Admin review and publication; published results available only to authorized users.
+
+Current implementation impact, proposed contracts/schema, authorization boundaries, validation, unresolved policy questions, and dependency-aware implementation order are recorded in `INTEGRATION_ARCHITECTURE.md`. Do not treat proposed API/schema details there as final where an open question is listed; confirm those rules before implementing or migrating.
+
 ## How to continue
 
 1. Read this file, then `README.md`.

@@ -4,6 +4,7 @@ import com.schoolenterprise.audit.dto.AuditLogResponse;
 import com.schoolenterprise.audit.dto.AuditUserResponse;
 import com.schoolenterprise.audit.service.AuditService;
 import com.schoolenterprise.common.api.ApiResponse;
+import com.schoolenterprise.common.security.ExcludeTeacherRoles;
 import com.schoolenterprise.common.security.RequirePermission;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/audit-logs")
 @RequiredArgsConstructor
+@ExcludeTeacherRoles
 public class AuditController {
 
     private final AuditService auditService;

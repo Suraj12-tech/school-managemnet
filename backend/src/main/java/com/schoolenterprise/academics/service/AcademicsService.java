@@ -18,18 +18,18 @@ import com.schoolenterprise.academics.dto.SubjectSummary;
 import com.schoolenterprise.academics.dto.SectionSummary;
 import com.schoolenterprise.academics.dto.TimetableEntryRequest;
 import com.schoolenterprise.academics.dto.TimetableEntryResponse;
+import com.schoolenterprise.academics.dto.TimetableWorkingDaysRequest;
+import com.schoolenterprise.academics.dto.TimetableWorkingDaysResponse;
 import com.schoolenterprise.academics.repository.DepartmentRepository;
 import com.schoolenterprise.academics.repository.SchoolClassRepository;
 import com.schoolenterprise.academics.repository.SectionRepository;
+import com.schoolenterprise.academics.repository.SchoolWorkingDayRepository;
 import com.schoolenterprise.academics.repository.SubjectRepository;
 import com.schoolenterprise.academics.repository.SubjectClassMappingRepository;
 import com.schoolenterprise.academics.repository.TimetableEntryRepository;
+import com.schoolenterprise.academics.entity.SchoolWorkingDay;
 import com.schoolenterprise.audit.service.AuditService;
 import com.schoolenterprise.common.security.PermissionService;
-import com.schoolenterprise.identity.entity.AppUser;
-import com.schoolenterprise.identity.entity.UserScope;
-import com.schoolenterprise.identity.repository.AppUserRepository;
-import com.schoolenterprise.identity.repository.UserScopeRepository;
 import com.schoolenterprise.school.service.SchoolService;
 import com.schoolenterprise.school.entity.AcademicYear;
 import com.schoolenterprise.school.repository.AcademicYearRepository;
@@ -45,6 +45,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.util.*;
 
 @Service
@@ -57,6 +58,7 @@ public class AcademicsService {
     private final SchoolClassRepository classRepository;
     private final SectionRepository sectionRepository;
     private final TimetableEntryRepository timetableEntryRepository;
+    private final SchoolWorkingDayRepository schoolWorkingDayRepository;
     private final SchoolService schoolService;
     private final AuditService auditService;
     private final PermissionService permissionService;
@@ -66,8 +68,6 @@ public class AcademicsService {
     private final EnrollmentRepository enrollmentRepository;
     private final ClassHistoryRepository classHistoryRepository;
     private final TeacherAssignmentRepository teacherAssignmentRepository;
-    private final AppUserRepository userRepository;
-    private final UserScopeRepository userScopeRepository;
 
     public List<DepartmentSummary> departments() {
         Long schoolId = schoolService.getSchool().getId();
@@ -710,10 +710,28 @@ public class AcademicsService {
     @Transactional
     public Section saveSection(Section s) {
         Long schoolId = schoolService.getSchool().getId();
+        Section existingSection = s.getId() == null ? null : sectionForSchool(s.getId());
         SchoolClass schoolClass = classRepository.findById(s.getClassId())
                 .orElseThrow(() -> com.schoolenterprise.common.exception.AppException.notFound("Class not found"));
         if (!schoolId.equals(schoolClass.getSchoolId())) {
             throw com.schoolenterprise.common.exception.AppException.notFound("Class not found");
+        }
+        if (existingSection == null && s.getClassTeacherStaffId() != null) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest(
+                    "Assign class teachers through Teacher Assignments");
+        }
+        if (existingSection != null) {
+            if (!Objects.equals(existingSection.getClassTeacherStaffId(), s.getClassTeacherStaffId())) {
+                throw com.schoolenterprise.common.exception.AppException.badRequest(
+                        "Change class teachers through Teacher Assignments");
+            }
+            if (existingSection.getClassTeacherStaffId() != null
+                    && (!Objects.equals(existingSection.getClassId(), s.getClassId())
+                    || !Objects.equals(existingSection.getAcademicYearId(), s.getAcademicYearId()))) {
+                throw com.schoolenterprise.common.exception.AppException.badRequest(
+                        "Deactivate or unassign the class teacher before moving this section");
+            }
+            s.setClassTeacherStaffId(existingSection.getClassTeacherStaffId());
         }
         AcademicYear year = schoolService.year(s.getAcademicYearId());
         if (!"ACTIVE".equals(year.getStatus())) {
@@ -743,9 +761,6 @@ public class AcademicsService {
                             + sectionCount + " section(s) for the selected academic year");
         }
         Section saved = sectionRepository.save(s);
-        if (saved.getClassTeacherStaffId() != null) {
-            grantSectionScopeToClassTeacher(saved.getClassTeacherStaffId(), saved.getId());
-        }
         auditService.record("classes", "edit", "Section", saved.getId(), saved.getName());
         return saved;
     }
@@ -782,15 +797,78 @@ public class AcademicsService {
 
     // ================= Timetable Management =================
 
+    public TimetableWorkingDaysResponse timetableWorkingDays() {
+        Long schoolId = schoolService.getSchool().getId();
+        List<String> days = schoolWorkingDayRepository.findBySchoolIdOrderByDisplayOrderAsc(schoolId).stream()
+                .map(SchoolWorkingDay::getDayOfWeek)
+                .toList();
+        return new TimetableWorkingDaysResponse(days);
+    }
+
+    @Transactional
+    public TimetableWorkingDaysResponse replaceTimetableWorkingDays(TimetableWorkingDaysRequest request) {
+        if (request == null || request.getDays() == null) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest("Working days are required");
+        }
+
+        Long schoolId = schoolService.lockCurrentSchoolForUpdate();
+        List<String> normalizedDays = new ArrayList<>(request.getDays().size());
+        Set<String> uniqueDays = new HashSet<>();
+        for (String day : request.getDays()) {
+            String normalized = normalizeTimetableDay(day);
+            if (!uniqueDays.add(normalized)) {
+                throw com.schoolenterprise.common.exception.AppException.badRequest(
+                        "Working days must not contain duplicates");
+            }
+            normalizedDays.add(normalized);
+        }
+
+        List<String> currentlyConfigured = schoolWorkingDayRepository
+                .findBySchoolIdOrderByDisplayOrderAsc(schoolId).stream()
+                .map(SchoolWorkingDay::getDayOfWeek)
+                .toList();
+        List<String> removedDays = currentlyConfigured.stream()
+                .filter(day -> !uniqueDays.contains(day))
+                .toList();
+        if (!removedDays.isEmpty()
+                && timetableEntryRepository.countBySchoolIdAndDayOfWeekIn(schoolId, removedDays) > 0) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest(
+                    "Cannot remove working days that have timetable entries: " + String.join(", ", removedDays));
+        }
+
+        schoolWorkingDayRepository.deleteBySchoolId(schoolId);
+        List<SchoolWorkingDay> replacements = new ArrayList<>(normalizedDays.size());
+        for (int i = 0; i < normalizedDays.size(); i++) {
+            SchoolWorkingDay workingDay = new SchoolWorkingDay();
+            workingDay.setSchoolId(schoolId);
+            workingDay.setDayOfWeek(normalizedDays.get(i));
+            workingDay.setDisplayOrder(i + 1);
+            replacements.add(workingDay);
+        }
+        schoolWorkingDayRepository.saveAll(replacements);
+        auditService.record("classes", "edit", "SchoolWorkingDays", schoolId,
+                String.join(", ", normalizedDays));
+        return new TimetableWorkingDaysResponse(normalizedDays);
+    }
+
     public List<TimetableEntryResponse> timetableEntries(Long sectionId, Long classId, Long academicYearId, Long staffId) {
         Long schoolId = schoolService.getSchool().getId();
         List<TimetableEntry> entries = timetableEntryRepository.findBySchoolId(schoolId);
+        Set<Long> visibleSections = null;
+        if (staffId != null && !permissionService.hasSchoolWideAccess()) {
+            if (academicYearId != null) {
+                permissionService.assertYearAccess(academicYearId);
+            }
+            visibleSections = permissionService.allowedSectionIds();
+        }
+        Set<Long> sectionScope = visibleSections;
 
         return entries.stream()
                 .filter(e -> sectionId == null || Objects.equals(e.getSectionId(), sectionId))
                 .filter(e -> classId == null || Objects.equals(e.getClassId(), classId))
                 .filter(e -> academicYearId == null || Objects.equals(e.getAcademicYearId(), academicYearId))
                 .filter(e -> staffId == null || Objects.equals(e.getStaffId(), staffId))
+                .filter(e -> sectionScope == null || sectionScope.contains(e.getSectionId()))
                 .map(this::timetableResponse)
                 .toList();
     }
@@ -802,7 +880,29 @@ public class AcademicsService {
 
     @Transactional
     public TimetableEntryResponse saveTimetableEntry(Long id, TimetableEntryRequest request) {
-        Long schoolId = schoolService.getSchool().getId();
+        String day = normalizeTimetableDay(request.getDayOfWeek());
+        Integer period = request.getPeriodNumber();
+        if (period == null || period < 1 || period > 12) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest(
+                    "Period number must be between 1 and 12");
+        }
+        if (request.getStatus() != null) {
+            validateStatus(request.getStatus());
+        }
+
+        Long schoolId = schoolService.lockCurrentSchoolForUpdate();
+        List<String> configuredDays = schoolWorkingDayRepository
+                .findBySchoolIdOrderByDisplayOrderAsc(schoolId).stream()
+                .map(SchoolWorkingDay::getDayOfWeek)
+                .toList();
+        if (configuredDays.isEmpty()) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest(
+                    "Configure at least one working day before saving timetable entries");
+        }
+        if (!configuredDays.contains(day)) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest(
+                    "Day of week is not configured as a working day");
+        }
         SchoolClass schoolClass = classForSchool(request.getClassId());
         Section section = sectionForSchool(request.getSectionId());
         AcademicYear year = schoolService.year(request.getAcademicYearId());
@@ -841,8 +941,6 @@ public class AcademicsService {
                     "Teacher " + staff.getFullName() + " is not assigned to teach " + subject.getName() + " in this section");
         }
 
-        String day = request.getDayOfWeek().trim().toUpperCase();
-        Integer period = request.getPeriodNumber();
         String room = blankToNull(request.getRoom());
 
         // 3. Conflict Check: Section slot conflict
@@ -920,6 +1018,21 @@ public class AcademicsService {
                 .orElseThrow(() -> com.schoolenterprise.common.exception.AppException.notFound("Timetable entry not found"));
     }
 
+    private String normalizeTimetableDay(String day) {
+        if (day == null || day.isBlank()) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest("Day of week is required");
+        }
+
+        String normalized = day.trim().toUpperCase(Locale.ROOT);
+        boolean validWeekday = Arrays.stream(DayOfWeek.values())
+                .anyMatch(weekday -> weekday.name().equals(normalized));
+        if (!validWeekday) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest(
+                    "Day of week must be a valid weekday");
+        }
+        return normalized;
+    }
+
     private TimetableEntryResponse timetableResponse(TimetableEntry entry) {
         String className = classRepository.findById(entry.getClassId()).map(SchoolClass::getName).orElse(null);
         String sectionName = sectionRepository.findById(entry.getSectionId()).map(Section::getName).orElse(null);
@@ -951,24 +1064,4 @@ public class AcademicsService {
         );
     }
 
-    private void grantSectionScopeToClassTeacher(Long staffId, Long sectionId) {
-        Staff staff = staffRepository.findById(staffId).orElse(null);
-        if (staff == null || staff.getUserId() == null) {
-            return;
-        }
-        boolean exists = userScopeRepository.findByUserId(staff.getUserId()).stream()
-                .anyMatch(sc -> "SECTION".equals(sc.getScopeType()) && sectionId.equals(sc.getScopeId()));
-        if (exists) {
-            return;
-        }
-        AppUser user = userRepository.findById(staff.getUserId()).orElse(null);
-        if (user == null) {
-            return;
-        }
-        UserScope scope = new UserScope();
-        scope.setUser(user);
-        scope.setScopeType("SECTION");
-        scope.setScopeId(sectionId);
-        userScopeRepository.save(scope);
-    }
 }

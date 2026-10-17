@@ -115,6 +115,26 @@ class GuardianManagementApiTest {
                         .content(linkBody))
                 .andExpect(status().isBadRequest());
 
+        MvcResult secondStudentCreate = mockMvc.perform(post("/api/students")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "admissionNumber":"ADM-GUARDIAN-002",
+                                  "firstName":"Student",
+                                  "lastName":"Two",
+                                  "status":"ACTIVE"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        long secondStudentId = idFrom(secondStudentCreate);
+        mockMvc.perform(post("/api/students/" + secondStudentId + "/guardians")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(linkBody))
+                .andExpect(status().isOk());
+
         mockMvc.perform(post("/api/students/" + studentId + "/guardians")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -130,8 +150,10 @@ class GuardianManagementApiTest {
         mockMvc.perform(get("/api/guardians/" + guardianId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.students[0].studentId").value(studentId))
-                .andExpect(jsonPath("$.data.students[0].emergencyContact").value(true));
+                .andExpect(jsonPath("$.data.students[*].studentId", hasItem((int) studentId)))
+                .andExpect(jsonPath("$.data.students[*].studentId", hasItem((int) secondStudentId)))
+                .andExpect(jsonPath("$.data.students[*].studentStatus", hasItem("ACTIVE")))
+                .andExpect(jsonPath("$.data.students[*].emergencyContact", hasItem(true)));
 
         mockMvc.perform(get("/api/guardians/999999/students")
                         .header("Authorization", "Bearer " + token))

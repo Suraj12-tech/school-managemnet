@@ -429,6 +429,9 @@ public class FinanceService {
         response.setId(invoice.getId());
         response.setInvoiceNumber(invoice.getInvoiceNumber());
         response.setStudentId(invoice.getStudentId());
+        response.setAcademicYearId(invoice.getAcademicYearId());
+        academicYearRepository.findById(invoice.getAcademicYearId())
+                .ifPresent(year -> response.setAcademicYear(year.getName()));
         response.setFeeStructureId(invoice.getFeeStructureId());
         response.setTotalAmount(invoice.getTotalAmount());
         response.setIssueDate(invoice.getIssueDate());
@@ -442,14 +445,23 @@ public class FinanceService {
         response.setStatus(FeeCalculator.invoiceStatus(invoice.getTotalAmount(), paid));
         studentRepository.findById(invoice.getStudentId()).ifPresent(student -> {
             response.setStudent((student.getFirstName() + " " + student.getLastName()).trim());
-            if (student.getCurrentSectionId() != null) {
-                sectionRepository.findById(student.getCurrentSectionId()).ifPresent(section -> {
-                    response.setSectionName(section.getName());
-                    if (section.getClassId() != null) {
-                        schoolClassRepository.findById(section.getClassId())
-                                .ifPresent(schoolClass -> response.setClassName(schoolClass.getName()));
-                    }
-                });
+            if (invoice.getAcademicYearId() != null) {
+                enrollmentRepository.findByStudentId(student.getId()).stream()
+                        .filter(enrollment -> invoice.getAcademicYearId().equals(enrollment.getAcademicYearId()))
+                        .filter(enrollment -> "ENROLLED".equalsIgnoreCase(enrollment.getStatus()))
+                        .map(enrollment -> sectionRepository.findById(enrollment.getSectionId()).orElse(null))
+                        .filter(section -> section != null
+                                && invoice.getAcademicYearId().equals(section.getAcademicYearId()))
+                        .findFirst()
+                        .ifPresent(section -> {
+                            response.setSectionId(section.getId());
+                            response.setSectionName(section.getName());
+                            response.setClassId(section.getClassId());
+                            if (section.getClassId() != null) {
+                                schoolClassRepository.findById(section.getClassId())
+                                        .ifPresent(schoolClass -> response.setClassName(schoolClass.getName()));
+                            }
+                        });
             }
         });
         if (invoice.getFeeStructureId() != null) {

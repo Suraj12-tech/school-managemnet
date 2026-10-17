@@ -23,13 +23,32 @@ export default function ExpensesPage() {
   }
   async function remove(id) { if (!window.confirm("Delete this expense?")) return; try { await api(`/api/expenses/${id}`, "DELETE"); await load(); } catch (err) { setError(err.message); } }
   const visibleRows = rows.filter((row) => `${row.title} ${row.category} ${row.description || ""}`.toLowerCase().includes(query.toLowerCase()) && (statusFilter === "ALL" || row.status === statusFilter));
+  const hasActiveFilters = query.trim() !== "" || statusFilter !== "ALL";
   return <div><PageHeader title="Expenses" description="Track school operating expenses and their payment status." actions={<button type="button" onClick={openCreate}>Add Expense</button>} />{error && <p className="error">{error}</p>}
     <div className="card filter-bar"><input placeholder="Search expenses" value={query} onChange={(e) => setQuery(e.target.value)} /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>PENDING</option><option>PAID</option><option>CANCELLED</option></select></div>
-    <ActionModal open={showForm} title={editingId ? "Edit expense" : "Create expense"} onClose={closeForm}>
-      <form className="card form-card" onSubmit={save}><h3>{editingId ? "Edit expense" : "Create expense"}</h3>
-        <input required placeholder="Expense title" value={form.title} onChange={(e) => update("title", e.target.value)} /><input required placeholder="Category" value={form.category} onChange={(e) => update("category", e.target.value)} /><input required min="0.01" step="0.01" type="number" placeholder="Amount" value={form.amount} onChange={(e) => update("amount", e.target.value)} /><input required type="date" value={form.expenseDate} onChange={(e) => update("expenseDate", e.target.value)} /><textarea placeholder="Description" value={form.description} onChange={(e) => update("description", e.target.value)} /><select value={form.status} onChange={(e) => update("status", e.target.value)}><option>PENDING</option><option>PAID</option><option>CANCELLED</option></select><input placeholder="Payment method" value={form.paymentMethod} onChange={(e) => update("paymentMethod", e.target.value)} /><input placeholder="Reference (optional)" value={form.referenceNo} onChange={(e) => update("referenceNo", e.target.value)} /><div className="row"><button>{editingId ? "Save changes" : "Create expense"}</button>{editingId && <button type="button" className="secondary" onClick={closeForm}>Cancel</button>}</div>
+    <ActionModal open={showForm} title={editingId ? "Edit expense" : "Create Expense"} onClose={closeForm} size="lg">
+      <form className="expense-form" onSubmit={save}>
+        <label>Expense Title<input required placeholder="Enter expense title" value={form.title} onChange={(e) => update("title", e.target.value)} /></label>
+        <label>Category<input required placeholder="Enter category" value={form.category} onChange={(e) => update("category", e.target.value)} /></label>
+        <label>Amount<input required min="0.01" step="0.01" type="number" placeholder="Enter amount" value={form.amount} onChange={(e) => update("amount", e.target.value)} /></label>
+        <label>Expense Date<input required type="date" value={form.expenseDate} onChange={(e) => update("expenseDate", e.target.value)} /></label>
+        <label>Description<textarea placeholder="Enter description" value={form.description} onChange={(e) => update("description", e.target.value)} /></label>
+        <label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option>PENDING</option><option>PAID</option><option>CANCELLED</option></select></label>
+        <label>Payment Method<input placeholder="Enter payment method" value={form.paymentMethod} onChange={(e) => update("paymentMethod", e.target.value)} /></label>
+        <label>Reference<input placeholder="Optional reference" value={form.referenceNo} onChange={(e) => update("referenceNo", e.target.value)} /></label>
+        <div className="expense-form-actions">
+          <button type="button" className="secondary" onClick={closeForm}>Cancel</button>
+          <button type="submit">{editingId ? "Save changes" : "Create Expense"}</button>
+        </div>
       </form>
     </ActionModal>
-    <TableWrap><table><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th><th>Status</th><th>Payment method</th><th>Actions</th></tr></thead><tbody>{visibleRows.map((row) => <tr key={row.id}><td>{row.expenseDate}</td><td>{row.title}</td><td>{row.category}</td><td>{Number(row.amount).toFixed(2)}</td><td>{row.status}</td><td>{row.paymentMethod || "—"}</td><td><button type="button" className="secondary" onClick={() => openEdit(row)}>Edit</button>{" "}<button type="button" onClick={() => remove(row.id)}>Delete</button></td></tr>)}{!visibleRows.length && <tr><td colSpan="7" className="muted">No expenses found.</td></tr>}</tbody></table></TableWrap>
+    {visibleRows.length ? <TableWrap><table><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th><th>Status</th><th>Payment method</th><th>Actions</th></tr></thead><tbody>{visibleRows.map((row) => <tr key={row.id}><td>{row.expenseDate}</td><td>{row.title}</td><td>{row.category}</td><td>{Number(row.amount).toFixed(2)}</td><td>{row.status}</td><td>{row.paymentMethod || "—"}</td><td><button type="button" className="secondary" onClick={() => openEdit(row)}>Edit</button>{" "}<button type="button" onClick={() => remove(row.id)}>Delete</button></td></tr>)}</tbody></table></TableWrap>
+      : <section className="card expense-empty-state">
+        <h3>No expenses found</h3>
+        <p>{hasActiveFilters ? "There are no expenses matching the selected filters." : "There are currently no expense records."}</p>
+        {hasActiveFilters
+          ? <button type="button" className="secondary" onClick={() => { setQuery(""); setStatusFilter("ALL"); }}>Clear Filters</button>
+          : <button type="button" onClick={openCreate}>Add Expense</button>}
+      </section>}
   </div>;
 }

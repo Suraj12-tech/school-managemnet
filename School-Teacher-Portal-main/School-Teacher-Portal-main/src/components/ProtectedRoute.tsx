@@ -1,0 +1,16 @@
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+export function ProtectedRoute() {
+  const { currentTeacher, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div>Loading authentication...</div>;
+  }
+
+  if (!currentTeacher) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+}

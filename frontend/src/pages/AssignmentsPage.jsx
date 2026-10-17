@@ -111,7 +111,7 @@ export default function AssignmentsPage() {
         </select>
         <select required value={form.staffId} onChange={(e) => setForm({ ...form, staffId: e.target.value })}>
           <option value="">Teacher</option>
-          {staff.filter((item) => item.status === "ACTIVE").map((item) =>
+          {staff.filter((item) => item.status === "ACTIVE" && item.staffCategory === "TEACHING").map((item) =>
             <option key={item.id} value={item.id}>{item.fullName}</option>)}
         </select>
         {form.assignmentType === "SUBJECT_TEACHER" && (

@@ -40,6 +40,10 @@ public class AppUserDetailsService implements UserDetailsService {
                 permissions.add(permission.getModuleName() + ":" + permission.getActionName());
             }
         }
+        if (!roles.contains("ADMIN")
+                && (roles.contains("CLASS_TEACHER") || roles.contains("SUBJECT_TEACHER"))) {
+            permissions.removeIf(permission -> !isTeacherReadPermission(permission));
+        }
 
         return new AppUserDetails(
                 user.getId(),
@@ -51,5 +55,13 @@ public class AppUserDetailsService implements UserDetailsService {
                 sensitivities,
                 userScopeRepository.findByUserId(user.getId())
         );
+    }
+
+    private boolean isTeacherReadPermission(String permission) {
+        return permission.endsWith(":view")
+                && (permission.startsWith("students:")
+                || permission.startsWith("classes:")
+                || permission.startsWith("subjects:")
+                || permission.startsWith("dashboard:"));
     }
 }

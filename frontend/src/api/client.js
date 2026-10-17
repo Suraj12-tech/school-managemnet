@@ -2,7 +2,18 @@ import { clearSession, getToken } from "../auth/authStorage.js";
 
 // Empty API_URL uses Vite's same-origin proxy during local development.
 // Set VITE_API_URL when the frontend and backend run on different servers.
-const API_URL = import.meta.env.VITE_API_URL ?? "";
+const API_URL = import.meta.env?.VITE_API_URL ?? "";
+
+export class ApiError extends Error {
+  constructor(message, status, path, responseMessage) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.path = path;
+    this.responseMessage = responseMessage;
+  }
+}
+
 export async function api(path, method = "GET", body) {
   const token = getToken();
   let response;
@@ -30,7 +41,7 @@ export async function api(path, method = "GET", body) {
     return json.data;
   }
 
-  throw new Error(json.message || getErrorMessage(response.status));
+  throw new ApiError(json.message || getErrorMessage(response.status), response.status, path, json.message);
 }
 
 export async function apiList(path) {
@@ -52,7 +63,7 @@ async function readResponse(response) {
 function getErrorMessage(status) {
   const messages = {
     401: "Your session has expired. Please log in again.",
-    403: "You do not have permission to perform this action.",
+    403: "Access denied. Your account may not have the role or permission required for this page. Use the portal for your role or contact your administrator.",
     404: "The requested resource was not found."
   };
 

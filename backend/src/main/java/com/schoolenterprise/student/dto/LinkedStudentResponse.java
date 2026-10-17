@@ -8,6 +8,8 @@ public record LinkedStudentResponse(
         String sectionName,
         String relationshipType,
         boolean primaryGuardian,
-        boolean emergencyContact
+        boolean emergencyContact,
+        String studentStatus,
+        String enrollmentStatus
 ) {
 }

@@ -39,6 +39,13 @@ public class SchoolService {
                 .orElseThrow(() -> AppException.notFound("School is not set up yet"));
     }
 
+    public Long lockCurrentSchoolForUpdate() {
+        Long schoolId = getSchool().getId();
+        return schoolRepository.findByIdForUpdate(schoolId)
+                .map(School::getId)
+                .orElseThrow(() -> AppException.notFound("School is not set up yet"));
+    }
+
     @Transactional
     public School saveSchool(School incoming) {
         School school = schoolRepository.findAll().stream().findFirst().orElse(new School());

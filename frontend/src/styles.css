@@ -337,18 +337,40 @@ a { color: var(--accent); }
   position: fixed;
   inset: 0;
   z-index: 30;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
   padding: 20px;
   background: rgba(20, 30, 42, .42);
 }
-.modal-card { width: min(100%, 500px); max-height: calc(100vh - 40px); overflow: auto; padding: 22px; border-radius: 14px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+.modal-card { width: min(100%, 500px); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 22px; border-radius: 14px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
 .modal-card.wide { width: min(100%, 820px); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; }
 .modal-header h2 { margin: 0; font-size: 20px; }
 .modal-card label { display: block; font-weight: 700; color: var(--side); }
 .modal-card label input { margin-top: 5px; }
 .modal-card .form-card { margin: 0; }
+.expense-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+.expense-form > label { min-width: 0; }
+.expense-form > label input,
+.expense-form > label select,
+.expense-form > label textarea { margin-top: 6px; }
+.expense-form > label textarea { min-height: 88px; height: auto; resize: vertical; }
+.expense-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.expense-empty-state { align-items: center; text-align: center; padding: 28px 18px; }
+.expense-empty-state h3 { margin: 0; }
+.expense-empty-state p { margin: 0 0 8px; color: var(--muted); }
 
 .content {
   flex: 1;
@@ -1116,6 +1138,274 @@ td button {
 
 .profile-grid .card { margin: 0; }
 
+.teacher-profile-header,
+.teacher-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  align-items: end;
+  gap: 16px;
+}
+
+.teacher-profile-header > div,
+.teacher-overview-grid > div,
+.teacher-profile-header > .teacher-year-select {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.teacher-profile-header strong,
+.teacher-overview-grid strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.teacher-profile-header select {
+  width: 100%;
+  min-width: 0;
+}
+
+.teacher-overview-grid h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.teacher-year-select,
+.teacher-filter-row label {
+  display: grid;
+  gap: 5px;
+}
+
+.teacher-profile-back {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: #5d6d7e;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.teacher-profile-back:hover { background: #4a5764; }
+
+.teacher-list-action {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.teacher-filter-row {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.teacher-filter-row input { min-width: min(320px, 100%); }
+
+.teacher-timetable-grid,
+.teacher-class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.teacher-day-card,
+.teacher-class-card { margin: 0; }
+
+.teacher-day-card h3,
+.teacher-class-card h3 { margin-top: 0; }
+
+.teacher-period {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0 12px 12px;
+  border-left: 3px solid var(--accent);
+  border-bottom: 1px solid var(--line);
+}
+
+.teacher-period:last-child { border-bottom: 0; }
+
+.teacher-student-filters input { flex: 1 1 250px; }
+
+.financial-reports-page { min-width: 0; }
+
+.financial-report-controls { display: grid; gap: 18px; }
+
+.financial-report-type {
+  display: grid;
+  gap: 6px;
+  max-width: 420px;
+}
+
+.financial-report-type select { min-width: 0; }
+
+.financial-filter-form {
+  display: grid;
+  gap: 12px;
+}
+
+.financial-filter-form h3,
+.financial-section-heading h3,
+.financial-records-heading h3 { margin: 0; }
+
+.financial-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 12px 16px;
+}
+
+.financial-filter-grid label,
+.financial-search {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.financial-filter-grid select,
+.financial-filter-grid input,
+.financial-search input { min-width: 0; }
+
+.financial-filter-actions { flex-wrap: wrap; }
+
+.financial-section-heading { margin: 20px 0 10px; }
+.financial-section-heading .muted,
+.financial-records-heading .muted { margin: 5px 0 0; }
+
+.financial-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.financial-stat-card span { margin-bottom: 0; }
+.financial-stat-card strong { overflow-wrap: anywhere; }
+
+.financial-stat-card button { margin-top: auto; }
+
+.financial-records { min-width: 0; }
+
+.financial-records-heading {
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.financial-records-heading > div { min-width: 0; }
+
+.financial-search {
+  width: min(100%, 440px);
+  margin: 12px 0 16px;
+}
+
+.financial-records .table-wrap { max-width: 100%; }
+
+.guardian-information {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+
+.guardian-information h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.guardian-information > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.guardian-information strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.guardian-students-heading { align-items: center; }
+.guardian-students-heading h3 { margin: 0; }
+.guardian-year-select { min-width: min(240px, 100%); }
+
+.payroll-page { min-width: 0; }
+
+.payroll-filters {
+  display: grid;
+  gap: 14px;
+}
+
+.payroll-search,
+.payroll-filter-grid label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.payroll-search input,
+.payroll-filter-grid select { min-width: 0; }
+
+.payroll-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px 16px;
+}
+
+.payroll-filter-actions { flex-wrap: wrap; }
+
+.payroll-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.payroll-summary .stat-card { min-width: 0; }
+.payroll-summary .stat-card strong { overflow-wrap: anywhere; }
+.payroll-table { min-width: 1100px; }
+.payroll-employee { min-width: 150px; max-width: 220px; overflow-wrap: anywhere; }
+.payroll-employee small { display: block; color: var(--muted); margin-top: 3px; }
+.payroll-payment-method { min-width: 130px; max-width: 220px; white-space: normal; overflow-wrap: anywhere; }
+.payroll-row-actions { white-space: nowrap; }
+.payroll-form > label { display: grid; gap: 6px; min-width: 0; }
+.payroll-form > label input,
+.payroll-form > label select { min-width: 0; }
+
+.payroll-empty-state { text-align: center; padding: 28px 18px; }
+.payroll-empty-state h3 { margin: 0; }
+.payroll-empty-state p { margin: 8px 0 16px; }
+
+.payroll-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 16px;
+}
+
+.payroll-detail-grid > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .payroll-filters { padding: 14px; }
+  .payroll-filter-actions > button { flex: 1 1 130px; }
+  .payroll-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .payroll-summary .stat-card { padding: 14px; }
+  .payroll-summary .stat-card strong { font-size: 18px; }
+}
+
 .login-wrap {
   min-height: 100vh;
   display: flex;
@@ -1267,6 +1557,13 @@ hr { width: 100%; border: 0; border-top: 1px solid #eee; }
   .card.form-card { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 760px) {
+  .expense-form { grid-template-columns: 1fr; }
+  .expense-form-actions { grid-column: 1; }
+  .modal-backdrop { padding: 12px; }
+  .modal-card { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); padding: 18px; }
+}
+
 @media (max-width: 820px) {
   .sidebar {
     position: fixed;
@@ -1290,4 +1587,174 @@ hr { width: 100%; border: 0; border-top: 1px solid #eee; }
   .calendar-day-cell { min-height: 70px; padding: 3px; }
   .calendar-event-item { font-size: 10px; padding: 1px 3px; }
   .perm-card-grid { grid-template-columns: 1fr; }
+}
+
+.invoice-page { min-width: 0; }
+.invoice-search-bar {
+  flex-direction: row;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.invoice-search-field,
+.invoice-filter-panel label,
+.invoice-form > label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.invoice-search-field { flex: 1 1 360px; }
+.invoice-search-field input,
+.invoice-filter-panel input,
+.invoice-filter-panel select,
+.invoice-form input,
+.invoice-form select { min-width: 0; }
+.invoice-search-actions,
+.invoice-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.invoice-filter-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  align-items: end;
+}
+.invoice-clear-filters { justify-self: start; }
+.invoice-table { min-width: 1000px; }
+.invoice-table td { white-space: nowrap; }
+.invoice-table td:nth-child(2),
+.invoice-table td:nth-child(3) { white-space: normal; min-width: 130px; }
+.invoice-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+.invoice-form .field-span { grid-column: 1 / -1; }
+.invoice-form-actions { margin-top: 4px; }
+.invoice-preview {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fafb;
+}
+.invoice-preview h3,
+.invoice-detail section h3 { margin: 0 0 8px; }
+.invoice-preview p { margin: 0 0 8px; color: var(--muted); }
+.invoice-preview ul { margin: 0; padding-left: 20px; }
+.invoice-detail-grid,
+.invoice-payment-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.invoice-detail-grid > div,
+.invoice-payment-summary > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+.invoice-detail-grid dt,
+.invoice-payment-summary dt { color: var(--muted); font-size: 12px; }
+.invoice-detail-grid dd,
+.invoice-payment-summary dd { margin: 5px 0 0; font-weight: 700; }
+.invoice-detail section { margin-top: 20px; }
+.invoice-receipts { margin-top: 24px; }
+.invoice-receipts h2 { font-size: 20px; margin: 0 0 10px; }
+
+@media (max-width: 760px) {
+  .invoice-search-bar { flex-direction: column; align-items: stretch; }
+  .invoice-search-actions { justify-content: flex-start; }
+  .invoice-form { grid-template-columns: 1fr; }
+  .invoice-form .field-span { grid-column: 1; }
+  .invoice-detail-grid,
+  .invoice-payment-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .invoice-table { min-width: 1000px; }
+}
+
+@media (max-width: 440px) {
+  .invoice-detail-grid,
+  .invoice-payment-summary { grid-template-columns: 1fr; }
+}
+
+.timetable-filters label {
+  flex: 1 1 180px;
+}
+
+.timetable-grid {
+  min-width: max-content;
+}
+
+.timetable-grid th:not(:first-child),
+.timetable-grid td {
+  min-width: 170px;
+  vertical-align: top;
+  white-space: normal;
+}
+
+.timetable-grid td:last-child {
+  white-space: normal;
+}
+
+.timetable-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #f8fbfc;
+}
+
+.timetable-entry > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.timetable-entry.is-inactive {
+  opacity: .65;
+}
+
+.timetable-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.content .timetable-entry-actions button {
+  font-size: 12px;
+  padding: 6px 9px;
+}
+
+.timetable-add-slot {
+  background: transparent !important;
+  color: var(--accent) !important;
+  border: 1px dashed var(--line) !important;
+}
+
+.timetable-setup-message {
+  align-items: flex-start;
+  border-left: 4px solid var(--accent);
+}
+
+.timetable-setup-message p,
+.timetable-form-note {
+  margin: 0;
+}
+
+.timetable-form {
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .timetable-filters {
+    align-items: stretch;
+  }
 }

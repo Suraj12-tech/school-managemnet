@@ -1,8 +1,11 @@
 package com.schoolenterprise.identity.repository;
 
 import com.schoolenterprise.identity.entity.AppUser;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -21,6 +24,10 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     boolean existsByUsernameAndIdNot(String username, Long id);
 
     boolean existsByEmailAndIdNot(String email, Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from AppUser u where u.id = :id")
+    Optional<AppUser> findByIdForUpdate(@Param("id") Long id);
 
     @Query("select u from AppUser u left join fetch u.roles r left join fetch r.permissions where u.username = :username")
     Optional<AppUser> findByUsernameWithRoles(String username);

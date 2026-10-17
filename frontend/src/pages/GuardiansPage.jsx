@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client.js";
 import ActionModal from "../components/ActionModal.jsx";
 import BulkImportModal from "../components/BulkImportModal.jsx";
@@ -12,9 +13,10 @@ const emptyForm = {
 };
 
 export default function GuardiansPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [form, setForm] = useState(emptyForm);
-  const [selected, setSelected] = useState(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -26,6 +28,14 @@ export default function GuardiansPage() {
     catch (err) { setError(err.message); }
   }
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const editId = new URLSearchParams(location.search).get("edit");
+    const guardian = rows.find((row) => String(row.id) === editId);
+    if (guardian) {
+      edit(guardian);
+      navigate("/guardians", { replace: true });
+    }
+  }, [location.search, rows]);
 
   function openCreate() {
     setEditingId(null);
@@ -50,16 +60,10 @@ export default function GuardiansPage() {
     } catch (err) { setError(err.message); }
   }
 
-  async function inspect(id) {
-    try { setSelected(await api("/api/guardians/" + id)); }
-    catch (err) { setError(err.message); }
-  }
-
   async function edit(row) {
     setEditingId(row.id);
     try {
       const details = await api("/api/guardians/" + row.id);
-      setSelected(details);
       setForm({ ...emptyForm, ...details });
       setShowForm(true);
     } catch (err) { setError(err.message); }
@@ -70,7 +74,6 @@ export default function GuardiansPage() {
       await api("/api/guardians/" + row.id + "/status", "PATCH",
         { status: row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" });
       load();
-      if (selected?.id === row.id) inspect(row.id);
     } catch (err) { setError(err.message); }
   }
   const guardianImportKeys = new Set(rows.map((row) => `${row.fullName || ""}|${row.phone || ""}`.toLowerCase()));
@@ -132,7 +135,7 @@ export default function GuardiansPage() {
       <table>
         <thead><tr><th>Name</th><th>Relation</th><th>Phone</th><th>Email</th><th>Associated students</th><th>Status</th><th /></tr></thead>
         <tbody>{visibleRows.map((g) => <tr key={g.id}>
-          <td><button className="linkish" onClick={() => inspect(g.id)}>{g.fullName}</button></td>
+          <td><Link to={`/guardians/${g.id}`}>{g.fullName}</Link></td>
           <td>{g.relationType}</td><td>{g.phone}</td><td>{g.email}</td>
           <td>{g.students?.length ? g.students.map((student) => `${student.studentName} (${student.admissionNumber})`).join(", ") : "None"}</td>
           <td><StatusBadge value={g.status} /></td>
@@ -140,13 +143,6 @@ export default function GuardiansPage() {
         </tr>)}{!visibleRows.length && <tr><td colSpan="7" className="muted">No guardians found.</td></tr>}</tbody>
       </table>
       </TableWrap>
-      {selected?.students && <div className="card">
-        <h3>{selected.fullName}</h3>
-        <p>{selected.email} · {selected.phone} · {selected.address}</p>
-        <p>Status: {selected.status} · Occupation: {selected.occupation || "-"}</p>
-        <h4>Linked students</h4>
-        <ul>{selected.students.map((s) => <li key={s.studentId}>{s.studentName} ({s.admissionNumber}) — {s.className || "-"} / {s.sectionName || "-"} — {s.relationshipType}{s.primaryGuardian ? " · Primary" : ""}{s.emergencyContact ? " · Emergency" : ""}</li>)}</ul>
-      </div>}
     </div>
   );
 }

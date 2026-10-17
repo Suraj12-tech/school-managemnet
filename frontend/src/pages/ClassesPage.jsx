@@ -8,7 +8,6 @@ export default function ClassesPage() {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [years, setYears] = useState([]);
-  const [staff, setStaff] = useState([]);
   const [klass, setKlass] = useState({ name: "", numberOfClassrooms: 1 });
   const [section, setSection] = useState({
     name: "A", classId: "", academicYearId: "", classTeacherStaffId: "", status: "ACTIVE"
@@ -32,7 +31,6 @@ export default function ClassesPage() {
       setClasses(await api("/api/classes"));
       await loadSections();
       setYears(await api("/api/academic-years"));
-      try { setStaff(await api("/api/staff")); } catch { setStaff([]); }
     } catch (err) { setError(err.message); }
   }
   useEffect(() => { load(); }, []);
@@ -194,10 +192,7 @@ export default function ClassesPage() {
           <select value={section.name} onChange={(e) => setSection({ ...section, name: e.target.value })}>
             {sectionNames.map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
-          <select value={section.classTeacherStaffId} onChange={(e) => setSection({ ...section, classTeacherStaffId: e.target.value })}>
-            <option value="">Class teacher (optional)</option>
-            {staff.map((s) => <option key={s.id} value={s.id}>{s.fullName}</option>)}
-          </select>
+          <p>Assign or change a class teacher from Teacher Assignments.</p>
           <select value={section.status} onChange={(e) => setSection({ ...section, status: e.target.value })}>
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>

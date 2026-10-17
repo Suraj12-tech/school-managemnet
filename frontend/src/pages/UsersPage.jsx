@@ -8,14 +8,17 @@ import TableWrap from "../components/TableWrap.jsx";
 
 const emptyForm = {
   username: "", email: "", password: "", fullName: "", phone: "", status: "ACTIVE",
-  roleIds: [], scopes: []
+  roleIds: [], scopes: [], staffId: ""
 };
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [staffOptions, setStaffOptions] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [selectedId, setSelectedId] = useState(null);
+  const [initialStaffId, setInitialStaffId] = useState("");
+  const [staffLinkConflict, setStaffLinkConflict] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -23,9 +26,12 @@ export default function UsersPage() {
   async function load() {
     try {
       setError("");
-      const [userData, roleData] = await Promise.all([api("/api/users"), api("/api/roles")]);
+      const [userData, roleData, staffData] = await Promise.all([
+        api("/api/users"), api("/api/roles"), api("/api/users/teacher-staff-options")
+      ]);
       setUsers(Array.isArray(userData) ? userData : []);
       setRoles(Array.isArray(roleData) ? roleData : []);
+      setStaffOptions(Array.isArray(staffData) ? staffData : []);
     } catch (err) {
       setError(err.message);
     }
@@ -35,6 +41,8 @@ export default function UsersPage() {
 
   function openCreate() {
     setSelectedId(null);
+    setInitialStaffId("");
+    setStaffLinkConflict(false);
     setMessage("");
     setForm(emptyForm);
     setShowForm(true);
@@ -42,6 +50,10 @@ export default function UsersPage() {
 
   function editUser(user) {
     setSelectedId(user.id);
+    const linkedStaff = staffOptions.filter((staff) => staff.linkedUserId === user.id);
+    const staffId = linkedStaff.length === 1 ? String(linkedStaff[0].id) : "";
+    setInitialStaffId(staffId);
+    setStaffLinkConflict(linkedStaff.length > 1);
     setMessage("");
     setForm({
       username: user.username || "",
@@ -51,6 +63,7 @@ export default function UsersPage() {
       phone: user.phone || "",
       status: user.status || "ACTIVE",
       roleIds: (user.roles || []).map((role) => role.id),
+      staffId,
       scopes: (user.scopes || []).map((scope) => ({
         scopeType: scope.scopeType,
         scopeId: scope.scopeId
@@ -62,6 +75,8 @@ export default function UsersPage() {
   function closeForm() {
     setShowForm(false);
     setSelectedId(null);
+    setInitialStaffId("");
+    setStaffLinkConflict(false);
     setForm(emptyForm);
   }
 
@@ -88,13 +103,25 @@ export default function UsersPage() {
     try {
       setError("");
       setMessage("");
+      const { staffId, ...userFields } = form;
       const payload = {
-        ...form,
+        ...userFields,
         password: form.password || undefined,
         scopes: form.scopes.filter((scope) => scope.scopeType && scope.scopeId)
       };
-      await api(selectedId ? `/api/users/${selectedId}` : "/api/users", selectedId ? "PUT" : "POST", payload);
+      const savedUser = await api(selectedId ? `/api/users/${selectedId}` : "/api/users",
+        selectedId ? "PUT" : "POST", payload);
+      const userId = selectedId || savedUser.id;
+      if (!selectedId) setSelectedId(userId);
+      if (!staffLinkConflict && String(staffId || "") !== String(initialStaffId || "")) {
+        if (staffId) {
+          await api(`/api/users/${userId}/staff-link`, "PUT", { staffId: Number(staffId) });
+        } else if (initialStaffId) {
+          await api(`/api/users/${userId}/staff-link`, "DELETE");
+        }
+      }
       setMessage(selectedId ? "User updated." : "User created.");
+      setInitialStaffId(staffId);
       closeForm();
       await load();
     } catch (err) {
@@ -136,6 +163,20 @@ export default function UsersPage() {
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>
           </select>
+          <strong>Linked Staff record</strong>
+          {staffLinkConflict && <p className="error">Multiple Staff links are present. Resolve the conflict before changing this link.</p>}
+          <select disabled={staffLinkConflict} value={form.staffId}
+            onChange={(e) => setForm({ ...form, staffId: e.target.value })}>
+            <option value="">No Staff link</option>
+            {staffOptions.map((staff) => {
+              const eligible = staff.status === "ACTIVE" && staff.staffCategory === "TEACHING";
+              const linkedElsewhere = staff.linkedUserId && staff.linkedUserId !== selectedId;
+              return <option key={staff.id} value={staff.id} disabled={!eligible || linkedElsewhere}>
+                {staff.employeeId} — {staff.fullName}{eligible ? "" : " (ineligible)"}
+                {linkedElsewhere ? " (linked to another user)" : ""}
+              </option>;
+            })}
+          </select>
           <strong>Assigned roles</strong>
           <div className="chips">
             {roles.map((role) => (
@@ -172,13 +213,14 @@ export default function UsersPage() {
       </ActionModal>
       <TableWrap>
       <table>
-        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Scope</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Staff</th><th>Scope</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           {users.map((user) => (
             <tr key={user.id}>
               <td>{user.fullName}</td>
               <td>{user.email}</td>
               <td>{(user.roles || []).map((role) => role.name).join(", ") || "—"}</td>
+              <td>{staffOptions.filter((staff) => staff.linkedUserId === user.id).map((staff) => staff.fullName).join(", ") || "—"}</td>
               <td>{(user.scopes || []).map((scope) => `${scope.scopeType}:${scope.scopeId}`).join(", ") || "—"}</td>
               <td><StatusBadge value={user.status} /></td>
               <td>

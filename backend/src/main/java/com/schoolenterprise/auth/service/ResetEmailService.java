@@ -2,6 +2,7 @@ package com.schoolenterprise.auth.service;
 
 import com.schoolenterprise.identity.entity.AppUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.MailException;
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class ResetEmailService {
-    private final JavaMailSender mailSender;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
 
     @Value("${app.auth.reset-email-enabled:false}")
     private boolean enabled;
@@ -22,6 +23,11 @@ public class ResetEmailService {
 
     public void send(AppUser user, String token) {
         if (!enabled) {
+            throw com.schoolenterprise.common.exception.AppException.badRequest(
+                    "Password reset email is not configured");
+        }
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null) {
             throw com.schoolenterprise.common.exception.AppException.badRequest(
                     "Password reset email is not configured");
         }

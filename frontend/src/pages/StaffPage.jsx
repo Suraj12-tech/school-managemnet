@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client.js";
 import ActionModal from "../components/ActionModal.jsx";
 import BulkImportModal from "../components/BulkImportModal.jsx";
@@ -8,21 +9,21 @@ import TableWrap from "../components/TableWrap.jsx";
 import { exportCsv } from "../utils/exportCsv.js";
 
 const emptyForm = {
-  employeeId: "", fullName: "", designation: "", departmentId: "", email: "", phone: "", status: "ACTIVE"
+  employeeId: "", fullName: "", designation: "", staffCategory: "", departmentId: "", email: "", phone: "", status: "ACTIVE"
 };
 
 export default function StaffPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
-  const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [profileTab, setProfileTab] = useState("overview");
 
   async function load() {
     try {
@@ -35,6 +36,14 @@ export default function StaffPage() {
     } catch (err) { setError(err.message); }
   }
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const editId = new URLSearchParams(location.search).get("edit");
+    const staff = rows.find((row) => String(row.id) === editId);
+    if (staff) {
+      edit(staff);
+      navigate("/staff", { replace: true });
+    }
+  }, [location.search, rows]);
 
   function openCreate() {
     setEditingId(null);
@@ -75,18 +84,9 @@ export default function StaffPage() {
     setForm({
       employeeId: staff.employeeId || "", fullName: staff.fullName || "",
       designation: staff.designation || "", departmentId: staff.departmentId || "",
-      email: staff.email || "", phone: staff.phone || "", status: staff.status || "ACTIVE"
+      staffCategory: staff.staffCategory || "", email: staff.email || "", phone: staff.phone || "", status: staff.status || "ACTIVE"
     });
-    setProfile(null);
     setShowForm(true);
-  }
-
-  async function view(staff) {
-    try {
-      setError("");
-      setProfile(await api(`/api/staff/${staff.id}`));
-      setProfileTab("overview");
-    } catch (err) { setError(err.message); }
   }
 
   async function toggleStatus(staff) {
@@ -96,7 +96,6 @@ export default function StaffPage() {
         status: staff.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"
       });
       await load();
-      if (profile?.id === staff.id) await view(staff);
     } catch (err) { setError(err.message); }
   }
   const staffImportKeys = new Set(rows.map((staff) => String(staff.employeeId || "").trim().toLowerCase()));
@@ -107,6 +106,7 @@ export default function StaffPage() {
       employeeId: row.employeeId?.trim(),
       fullName: row.fullName?.trim(),
       designation: row.designation?.trim(),
+      staffCategory: row.staffCategory?.trim() || "",
       departmentId,
       email: row.email?.trim(),
       phone: row.phone?.trim() || undefined,
@@ -128,7 +128,7 @@ export default function StaffPage() {
       <div className="card filter-bar">
         <input placeholder="Search staff" value={query} onChange={(e) => setQuery(e.target.value)} />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">All statuses</option><option>ACTIVE</option><option>INACTIVE</option></select>
-        <button type="button" className="secondary" onClick={() => exportCsv("staff.csv", visibleRows.map((staff) => ({ employeeId: staff.employeeId, name: staff.fullName, designation: staff.designation, status: staff.status })))}>Export</button>
+        <button type="button" className="secondary" onClick={() => exportCsv("staff.csv", visibleRows.map((staff) => ({ employeeId: staff.employeeId, name: staff.fullName, designation: staff.designation, staffCategory: staff.staffCategory || "", status: staff.status })))}>Export</button>
       </div>
       <ActionModal open={showForm} title={editingId ? "Edit staff" : "Create staff"} onClose={closeForm}>
         <form className="card form-card" onSubmit={save}>
@@ -138,6 +138,12 @@ export default function StaffPage() {
             onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
           <input required placeholder="Designation" value={form.designation}
             onChange={(e) => setForm({ ...form, designation: e.target.value })} />
+          <select value={form.staffCategory}
+            onChange={(e) => setForm({ ...form, staffCategory: e.target.value })}>
+            <option value="">Unclassified</option>
+            <option value="TEACHING">Teaching</option>
+            <option value="NON_TEACHING">Non-teaching</option>
+          </select>
           <select required value={form.departmentId}
             onChange={(e) => setForm({ ...form, departmentId: e.target.value })}>
             <option value="">Department</option>
@@ -161,7 +167,7 @@ export default function StaffPage() {
         open={showImport}
         onClose={() => { setShowImport(false); load(); }}
         title="Import staff"
-        columns={["employeeId", "fullName", "designation", "departmentId", "email", "phone", "status"]}
+        columns={["employeeId", "fullName", "designation", "staffCategory", "departmentId", "email", "phone", "status"]}
         requiredColumns={["employeeId", "fullName", "designation", "departmentId", "email"]}
         existingKeys={staffImportKeys}
         keyOf={(row) => row.employeeId?.trim().toLowerCase()}
@@ -170,48 +176,22 @@ export default function StaffPage() {
       />
       <TableWrap>
       <table>
-        <thead><tr><th>Employee ID</th><th>Name</th><th>Designation</th><th>Department</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Employee ID</th><th>Name</th><th>Designation</th><th>Category</th><th>Department</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           {visibleRows.map((staff) => <tr key={staff.id}>
             <td>{staff.employeeId}</td><td>{staff.fullName}</td><td>{staff.designation}</td>
+            <td>{staff.staffCategory || "Unclassified"}</td>
             <td>{departmentLabel(staff)}</td><td>{staff.email}</td><td><StatusBadge value={staff.status} /></td>
-            <td><button type="button" className="secondary" onClick={() => view(staff)}>View</button>{" "}
+            <td><Link className="teacher-list-action" to={`/staff/${staff.id}`}>View Profile</Link>{" "}
               <button type="button" className="secondary" onClick={() => edit(staff)}>Edit</button>{" "}
               <button type="button" onClick={() => toggleStatus(staff)}>
                 {staff.status === "ACTIVE" ? "Deactivate" : "Activate"}
               </button></td>
           </tr>)}
-          {!visibleRows.length && <tr><td colSpan="7" className="muted">No staff match the current filters.</td></tr>}
+          {!visibleRows.length && <tr><td colSpan="8" className="muted">No staff match the current filters.</td></tr>}
         </tbody>
       </table>
       </TableWrap>
-      {profile && <div className="card">
-        <h3>Staff Profile — {profile.employeeId}</h3>
-        <div className="tabs" role="tablist">
-          <button type="button" className={profileTab === "overview" ? "tab active" : "tab"} onClick={() => setProfileTab("overview")}>Overview</button>
-          <button type="button" className={profileTab === "assignments" ? "tab active" : "tab"} onClick={() => setProfileTab("assignments")}>Assignments</button>
-        </div>
-        {profileTab === "overview" && <>
-          <p><strong>Name:</strong> {profile.fullName}</p>
-          <p><strong>Designation:</strong> {profile.designation}</p>
-          <p><strong>Department:</strong> {departmentLabel(profile)}</p>
-          <p><strong>Email:</strong> {profile.email} · <strong>Phone:</strong> {profile.phone || "—"}</p>
-          <p><strong>Status:</strong> {profile.status}</p>
-        </>}
-        {profileTab === "assignments" && <>
-          <h4>Subject / Class assignments</h4>
-          {profile.assignments?.length ? <table>
-            <thead><tr><th>Subject</th><th>Class</th><th>Section</th><th>Academic Year</th></tr></thead>
-            <tbody>{profile.assignments.map((assignment) => <tr key={assignment.id}>
-              <td>{assignment.subjectName || `#${assignment.subjectId}`}</td>
-              <td>{assignment.className || `#${assignment.classId}`}</td>
-              <td>{assignment.sectionName || "—"}</td>
-              <td>{assignment.academicYearName || `#${assignment.academicYearId}`}</td>
-            </tr>)}</tbody>
-          </table> : <p className="muted">No assignments.</p>}
-        </>}
-        <button type="button" className="secondary" onClick={() => setProfile(null)}>Close</button>
-      </div>}
     </div>
   );
 }

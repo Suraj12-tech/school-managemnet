@@ -41,6 +41,11 @@ public class AuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
         AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        AppUser dbUser = userRepository.findByIdForUpdate(user.getUserId())
+                .orElseThrow(() -> AppException.unauthorized("Please login"));
+        if (!"ACTIVE".equals(dbUser.getStatus())) {
+            throw AppException.unauthorized("Please login");
+        }
 
         String tokenId = UUID.randomUUID().toString();
         String jwt = jwtService.createToken(user.getUserId(), user.getUsername(), tokenId);
@@ -55,7 +60,6 @@ public class AuthService {
 
         auditService.record("users", "login", "AppUser", user.getUserId(), "Login success");
 
-        AppUser dbUser = userRepository.findById(user.getUserId()).orElseThrow();
         return LoginResponse.builder()
                 .token(jwt)
                 .userId(user.getUserId())

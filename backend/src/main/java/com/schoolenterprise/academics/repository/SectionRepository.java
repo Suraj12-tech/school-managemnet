@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface SectionRepository extends JpaRepository<Section, Long> {
     List<Section> findByClassId(Long classId);
+    List<Section> findByClassIdAndAcademicYearId(Long classId, Long academicYearId);
     List<Section> findByAcademicYearId(Long academicYearId);
     List<Section> findByClassIdIn(java.util.Collection<Long> classIds);
     boolean existsByClassIdAndAcademicYearIdAndNameIgnoreCase(Long classId, Long academicYearId, String name);

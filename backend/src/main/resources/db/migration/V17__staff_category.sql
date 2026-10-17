@@ -1,0 +1,1 @@
+ALTER TABLE staff ADD COLUMN staff_category VARCHAR(20) NULL;

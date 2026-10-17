@@ -31,6 +31,8 @@ class PermissionServiceTest {
     private TeacherAssignmentRepository teacherAssignmentRepository;
     @Mock
     private AcademicYearRepository academicYearRepository;
+    @Mock
+    private TeacherScopeResolver teacherScopeResolver;
     @InjectMocks
     private PermissionService permissionService;
 
@@ -65,14 +67,48 @@ class PermissionServiceTest {
     }
 
     @Test
-    void sectionScopeBlocksOtherSections() {
+    void genericSectionScopeDoesNotGrantTeacherAccess() {
         UserScope scope = new UserScope();
         scope.setScopeType("SECTION");
         scope.setScopeId(10L);
         login("teacher", Set.of("CLASS_TEACHER"), Set.of("students:view"), List.of(scope));
-        when(staffRepository.findByUserId(2L)).thenReturn(Optional.empty());
+        when(teacherScopeResolver.resolve(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new TeacherScope(2L, Set.of(), Set.of(), Set.of(), Set.of(), Set.of()));
         assertThrows(AppException.class, () -> permissionService.assertStudentSection(99L));
-        assertDoesNotThrow(() -> permissionService.assertStudentSection(10L));
+        assertThrows(AppException.class, () -> permissionService.assertStudentSection(10L));
+    }
+
+    @Test
+    void genericSchoolScopeDoesNotGiveTeacherSchoolWideAccess() {
+        UserScope scope = new UserScope();
+        scope.setScopeType("SCHOOL");
+        scope.setScopeId(1L);
+        login("teacher", Set.of("SUBJECT_TEACHER"), Set.of("students:view"), List.of(scope));
+        assertDoesNotThrow(() -> org.junit.jupiter.api.Assertions.assertFalse(permissionService.hasSchoolWideAccess()));
+    }
+
+    @Test
+    void teacherAcademicYearAccessMustComeFromAssignments() {
+        login("teacher", Set.of("CLASS_TEACHER"), Set.of("students:view"), List.of());
+        when(teacherScopeResolver.resolve(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new TeacherScope(2L, Set.of(), Set.of(20L), Set.of(30L), Set.of(), Set.of(40L)));
+        assertDoesNotThrow(() -> permissionService.assertYearAccess(40L));
+        assertThrows(AppException.class, () -> permissionService.assertYearAccess(41L));
+    }
+
+    @Test
+    void teacherRolesCannotUseGenericWritePermissions() {
+        login("teacher", Set.of("CLASS_TEACHER"), Set.of("students:edit"), List.of());
+        assertThrows(AppException.class, () -> permissionService.require("students", "edit"));
+    }
+
+    @Test
+    void genericAdminControllersRejectTeacherRolesButStillAllowAdmin() {
+        login("teacher", Set.of("CLASS_TEACHER"), Set.of("students:view"), List.of());
+        assertThrows(AppException.class, permissionService::assertNotTeacher);
+
+        login("admin", Set.of("ADMIN"), Set.of(), List.of());
+        assertDoesNotThrow(permissionService::assertNotTeacher);
     }
 
     private void login(String username, Set<String> roles, Set<String> permissions, List<UserScope> scopes) {

@@ -41,15 +41,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             Claims claims = jwtService.parse(token);
             String username = claims.getSubject();
             String tokenId = claims.getId();
+            Object claimedUserId = claims.get("uid");
 
             LoginSession session = loginSessionRepository.findByTokenId(tokenId).orElse(null);
-            if (session == null || session.isRevoked() || session.getExpiresAt().isBefore(LocalDateTime.now())) {
+            if (!(claimedUserId instanceof Number userId)
+                    || session == null
+                    || session.isRevoked()
+                    || session.getExpiresAt().isBefore(LocalDateTime.now())
+                    || !session.getUserId().equals(userId.longValue())) {
                 chain.doFilter(request, response);
                 return;
             }
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails user = userDetailsService.loadUserByUsername(username);
+                if (!(user instanceof AppUserDetails appUser) || !appUser.isEnabled()
+                        || !appUser.getUserId().equals(userId.longValue())) {
+                    chain.doFilter(request, response);
+                    return;
+                }
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

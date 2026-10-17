@@ -8,6 +8,7 @@ import java.util.List;
 public interface TeacherAssignmentRepository extends JpaRepository<TeacherAssignment, Long> {
     List<TeacherAssignment> findByStaffId(Long staffId);
     List<TeacherAssignment> findBySubjectId(Long subjectId);
+    boolean existsByStaffIdAndStatus(Long staffId, String status);
     boolean existsBySectionId(Long sectionId);
     void deleteBySubjectId(Long subjectId);
 }

@@ -6,6 +6,7 @@ import com.schoolenterprise.academics.repository.SectionRepository;
 import com.schoolenterprise.school.entity.AcademicYear;
 import com.schoolenterprise.school.repository.AcademicYearRepository;
 import com.schoolenterprise.student.repository.StudentRepository;
+import com.schoolenterprise.staff.entity.Staff;
 import com.schoolenterprise.staff.repository.StaffRepository;
 import com.schoolenterprise.staff.repository.TeacherAssignmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -28,6 +31,7 @@ public class PermissionService {
     private final AcademicYearRepository academicYearRepository;
     private final SectionRepository sectionRepository;
     private final StudentRepository studentRepository;
+    private final TeacherScopeResolver teacherScopeResolver;
 
     public AppUserDetails currentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -42,6 +46,9 @@ public class PermissionService {
         if (isAdmin(user)) {
             return;
         }
+        if (isTeacher(user) && !isViewAction(action)) {
+            throw AppException.forbidden("Teacher roles are read-only");
+        }
         String key = module + ":" + action;
         if (!user.getPermissions().contains(key)) {
             throw AppException.forbidden("Missing permission " + key);
@@ -51,6 +58,12 @@ public class PermissionService {
         }
         if ("staff".equals(module) && !isViewAction(action) && !hasHrAccess(user)) {
             throw AppException.forbidden("Staff write access is HR-restricted");
+        }
+    }
+
+    public void assertNotTeacher() {
+        if (isTeacher(currentUser())) {
+            throw AppException.forbidden("Use the dedicated teacher portal endpoints");
         }
     }
 
@@ -80,6 +93,9 @@ public class PermissionService {
 
     public boolean canAccessHistoricalYears() {
         AppUserDetails user = currentUser();
+        if (isTeacher(user)) {
+            return false;
+        }
         return isAdmin(user)
                 || user.getPermissions().contains("fees:export")
                 || user.getPermissions().contains("school:edit");
@@ -94,6 +110,13 @@ public class PermissionService {
     }
 
     public void assertYearAccess(Long yearId) {
+        AppUserDetails user = currentUser();
+        if (isTeacher(user)) {
+            if (yearId == null || !teacherScopeResolver.resolve(user).academicYearIds().contains(yearId)) {
+                throw AppException.forbidden("Academic year is outside your active teacher assignments");
+            }
+            return;
+        }
         if (yearId == null || canAccessHistoricalYears()) {
             return;
         }
@@ -116,6 +139,9 @@ public class PermissionService {
         if (isAdmin(user)) {
             return true;
         }
+        if (isTeacher(user)) {
+            return false;
+        }
         return user.getScopes().stream().anyMatch(s -> "SCHOOL".equals(s.getScopeType()) || "CAMPUS".equals(s.getScopeType()));
     }
 
@@ -124,6 +150,9 @@ public class PermissionService {
      */
     public Set<Long> allowedSectionIds() {
         AppUserDetails user = currentUser();
+        if (isTeacher(user)) {
+            return teacherScopeResolver.resolve(user).sectionIds();
+        }
         Set<Long> ids = new HashSet<>();
         for (UserScope scope : user.getScopes()) {
             if ("SECTION".equals(scope.getScopeType())) {
@@ -135,7 +164,7 @@ public class PermissionService {
                 sectionRepository.findByClassId(scope.getScopeId()).forEach(section -> ids.add(section.getId()));
             }
         }
-        staffRepository.findByUserId(user.getUserId()).ifPresent(staff -> {
+        linkedStaff(user.getUserId()).ifPresent(staff -> {
             teacherAssignmentRepository.findByStaffId(staff.getId()).forEach(a -> {
                 if (a.getSectionId() != null) {
                     ids.add(a.getSectionId());
@@ -147,13 +176,16 @@ public class PermissionService {
 
     public Set<Long> allowedClassIds() {
         AppUserDetails user = currentUser();
+        if (isTeacher(user)) {
+            return teacherScopeResolver.resolve(user).classIds();
+        }
         Set<Long> ids = new HashSet<>();
         for (UserScope scope : user.getScopes()) {
             if ("CLASS".equals(scope.getScopeType())) {
                 ids.add(scope.getScopeId());
             }
         }
-        staffRepository.findByUserId(user.getUserId()).ifPresent(staff -> {
+        linkedStaff(user.getUserId()).ifPresent(staff -> {
             teacherAssignmentRepository.findByStaffId(staff.getId()).forEach(a -> ids.add(a.getClassId()));
         });
         return ids;
@@ -161,13 +193,16 @@ public class PermissionService {
 
     public Set<Long> allowedSubjectIds() {
         AppUserDetails user = currentUser();
+        if (isTeacher(user)) {
+            return teacherScopeResolver.resolve(user).subjectIds();
+        }
         Set<Long> ids = new HashSet<>();
         for (UserScope scope : user.getScopes()) {
             if ("SUBJECT".equals(scope.getScopeType())) {
                 ids.add(scope.getScopeId());
             }
         }
-        staffRepository.findByUserId(user.getUserId()).ifPresent(staff -> {
+        linkedStaff(user.getUserId()).ifPresent(staff -> {
             teacherAssignmentRepository.findByStaffId(staff.getId()).forEach(a -> ids.add(a.getSubjectId()));
         });
         return ids;
@@ -186,6 +221,9 @@ public class PermissionService {
 
     public Set<Long> allowedStudentIds() {
         AppUserDetails user = currentUser();
+        if (isTeacher(user)) {
+            return Set.of();
+        }
         Set<Long> ids = new HashSet<>();
         for (UserScope scope : user.getScopes()) {
             if ("STUDENT".equals(scope.getScopeType()) || "ASSIGNED_STUDENT".equals(scope.getScopeType())) {
@@ -215,6 +253,11 @@ public class PermissionService {
                         || (scope.getScopeType().equals(scopeType) && scope.getScopeId().equals(scopeId)));
     }
 
+    public boolean isTeacher(AppUserDetails user) {
+        return !isAdmin(user)
+                && (user.getRoles().contains("CLASS_TEACHER") || user.getRoles().contains("SUBJECT_TEACHER"));
+    }
+
     public void assertClass(Long classId) {
         if (hasSchoolWideAccess()) {
             return;
@@ -233,5 +276,10 @@ public class PermissionService {
             return;
         }
         throw AppException.forbidden("This subject is outside your assigned scope");
+    }
+
+    private Optional<Staff> linkedStaff(Long userId) {
+        List<Staff> matches = staffRepository.findAllByUserId(userId);
+        return matches.size() == 1 ? Optional.of(matches.get(0)) : Optional.empty();
     }
 }

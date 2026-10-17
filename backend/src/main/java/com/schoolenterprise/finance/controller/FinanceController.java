@@ -3,6 +3,7 @@ package com.schoolenterprise.finance.controller;
 import com.schoolenterprise.common.api.ApiResponse;
 import com.schoolenterprise.common.security.AppUserDetails;
 import com.schoolenterprise.common.security.RequirePermission;
+import com.schoolenterprise.common.security.ExcludeTeacherRoles;
 import com.schoolenterprise.finance.entity.*;
 import com.schoolenterprise.finance.dto.FeeHeadRequest;
 import com.schoolenterprise.finance.dto.FeeStructureItemRequest;
@@ -31,6 +32,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@ExcludeTeacherRoles
 public class FinanceController {
 
     private final FinanceService financeService;

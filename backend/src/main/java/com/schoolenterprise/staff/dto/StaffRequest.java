@@ -23,6 +23,8 @@ public class StaffRequest {
     private String email;
     @Size(max = 30)
     private String phone;
+    @Pattern(regexp = "^(TEACHING|NON_TEACHING)?$", message = "staffCategory must be TEACHING or NON_TEACHING")
+    private String staffCategory;
     @Pattern(regexp = "ACTIVE|INACTIVE", message = "status must be ACTIVE or INACTIVE")
     private String status = "ACTIVE";
 }

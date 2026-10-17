@@ -14,6 +14,7 @@ public class StaffResponse {
     private final String email;
     private final String phone;
     private final String status;
+    private final String staffCategory;
 
     public StaffResponse(Staff staff, String departmentName) {
         id = staff.getId();
@@ -25,6 +26,7 @@ public class StaffResponse {
         email = staff.getEmail();
         phone = staff.getPhone();
         status = staff.getStatus();
+        staffCategory = staff.getStaffCategory();
     }
 
     protected StaffResponse(StaffResponse source) {
@@ -37,5 +39,6 @@ public class StaffResponse {
         email = source.email;
         phone = source.phone;
         status = source.status;
+        staffCategory = source.staffCategory;
     }
 }

@@ -19,6 +19,10 @@ public class PermissionInterceptor implements HandlerInterceptor {
         if (!(handler instanceof HandlerMethod method)) {
             return true;
         }
+        if (method.hasMethodAnnotation(ExcludeTeacherRoles.class)
+                || method.getBeanType().isAnnotationPresent(ExcludeTeacherRoles.class)) {
+            permissionService.assertNotTeacher();
+        }
         RequirePermission annotation = method.getMethodAnnotation(RequirePermission.class);
         if (annotation == null) {
             annotation = method.getBeanType().getAnnotation(RequirePermission.class);

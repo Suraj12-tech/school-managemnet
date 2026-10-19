@@ -1,8 +1,31 @@
 import { clearSession, getToken } from "../auth/authStorage.js";
 
 // Empty API_URL uses Vite's same-origin proxy during local development.
-// Set VITE_API_URL when the frontend and backend run on different servers.
-const API_URL = import.meta.env?.VITE_API_URL ?? "";
+// When hosted on GitHub Pages and no explicit VITE_API_URL is configured,
+// default to http://localhost:8080 for testing against the local backend.
+export function getApiBaseUrl() {
+  if (typeof window !== "undefined") {
+    const custom = localStorage.getItem("app_custom_api_url");
+    if (custom) return custom.replace(/\/+$/, "");
+  }
+  if (import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, "");
+  }
+  if (typeof window !== "undefined" && window.location.hostname.includes("github.io")) {
+    return "http://localhost:8080";
+  }
+  return "";
+}
+
+export function setApiBaseUrl(url) {
+  if (typeof window !== "undefined") {
+    if (!url || !url.trim()) {
+      localStorage.removeItem("app_custom_api_url");
+    } else {
+      localStorage.setItem("app_custom_api_url", url.trim().replace(/\/+$/, ""));
+    }
+  }
+}
 
 export class ApiError extends Error {
   constructor(message, status, path, responseMessage) {
@@ -17,9 +40,10 @@ export class ApiError extends Error {
 export async function api(path, method = "GET", body) {
   const token = getToken();
   let response;
+  const baseUrl = getApiBaseUrl();
 
   try {
-    response = await fetch(API_URL + path, {
+    response = await fetch(baseUrl + path, {
       method,
       headers: {
         "Content-Type": "application/json",
@@ -28,7 +52,8 @@ export async function api(path, method = "GET", body) {
       body: body ? JSON.stringify(body) : undefined
     });
   } catch {
-    throw new Error("Cannot reach the API. Start the backend on port 8080.");
+    const target = baseUrl || "http://localhost:8080";
+    throw new Error(`Cannot reach the backend API at ${target}. Please make sure your backend is running.`);
   }
 
   const json = await readResponse(response);

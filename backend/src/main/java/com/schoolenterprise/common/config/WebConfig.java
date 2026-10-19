@@ -54,7 +54,7 @@ public class WebConfig implements WebMvcConfigurer {
         } else {
             List<String> localPatterns = List.of("http://localhost:*", "http://127.0.0.1:*");
             List<String> developmentPatterns = development
-                    ? List.of("https://*.trycloudflare.com", "https://*.ngrok-free.app")
+                    ? List.of("https://*.trycloudflare.com", "https://*.ngrok-free.app", "https://*.github.io")
                     : List.of();
             configuration.setAllowedOriginPatterns(
                     java.util.stream.Stream.concat(

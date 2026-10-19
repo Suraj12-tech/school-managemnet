@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>School Enterprise</title>
+    <script>
+      // Redirect GitHub Pages 404 to root hash route
+      (function() {
+        var path = window.location.pathname.replace(/^\/school-managemnet\/?/, '');
+        var search = window.location.search || '';
+        var hash = window.location.hash || '';
+        if (path) {
+          window.location.replace('/school-managemnet/#' + (path.startsWith('/') ? path : '/' + path) + search + hash);
+        } else {
+          window.location.replace('/school-managemnet/' + search + hash);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to School Enterprise...</p>
+  </body>
+</html>

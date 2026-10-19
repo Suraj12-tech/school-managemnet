@@ -121,6 +121,7 @@ class WebConfigCorsTest {
         assertEquals("http://127.0.0.1:8081", cors.checkOrigin("http://127.0.0.1:8081"));
         assertEquals("https://abc.trycloudflare.com", cors.checkOrigin("https://abc.trycloudflare.com"));
         assertEquals("https://abc.ngrok-free.app", cors.checkOrigin("https://abc.ngrok-free.app"));
+        assertEquals("https://suraj12-tech.github.io", cors.checkOrigin("https://suraj12-tech.github.io"));
     }
 
     private CorsConfiguration configuration(String profile, String configuredOrigins) {

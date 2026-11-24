@@ -128,7 +128,7 @@ export function SubjectDetails() {
         {activeTab === 'classes' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <h2 style={{ fontSize: '1.5rem' }}>Classes Taught</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
               {subject.classes.map(className => {
                 const cls = allClasses.find(c => c.name === className);
                 return (
@@ -154,7 +154,7 @@ export function SubjectDetails() {
 
         {activeTab === 'assignments' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <h2 style={{ fontSize: '1.5rem' }}>Subject Assignments</h2>
               <button className="btn btn-primary" onClick={() => navigate('/app/assignments')}>
                 <FilePlus size={18} /> New Assignment
@@ -164,37 +164,39 @@ export function SubjectDetails() {
               <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                 Showing assignments across all classes for {subject.name}.
               </p>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ backgroundColor: 'var(--secondary-color)', borderBottom: '1px solid var(--border-color)' }}>
-                    <th style={{ padding: '1rem' }}>Title</th>
-                    <th style={{ padding: '1rem' }}>Class</th>
-                    <th style={{ padding: '1rem' }}>Due Date</th>
-                    <th style={{ padding: '1rem' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem', fontWeight: 500 }}>Chapter 4 Exercises</td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{subject.classes[0] || '10th A'}</td>
-                    <td style={{ padding: '1rem' }}>Oct 15, 2026</td>
-                    <td style={{ padding: '1rem' }}><span className="badge badge-success">Active</span></td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '1rem', fontWeight: 500 }}>Final Project Draft</td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{subject.classes[0] || '10th A'}</td>
-                    <td style={{ padding: '1rem' }}>Nov 02, 2026</td>
-                    <td style={{ padding: '1rem' }}><span className="badge" style={{ background: 'var(--border-color)', color: 'var(--text-secondary)' }}>Closed</span></td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="table-responsive">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--secondary-color)', borderBottom: '1px solid var(--border-color)' }}>
+                      <th style={{ padding: '1rem' }}>Title</th>
+                      <th style={{ padding: '1rem' }}>Class</th>
+                      <th style={{ padding: '1rem' }}>Due Date</th>
+                      <th style={{ padding: '1rem' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '1rem', fontWeight: 500 }}>Chapter 4 Exercises</td>
+                      <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{subject.classes[0] || '10th A'}</td>
+                      <td style={{ padding: '1rem' }}>Oct 15, 2026</td>
+                      <td style={{ padding: '1rem' }}><span className="badge badge-success">Active</span></td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '1rem', fontWeight: 500 }}>Final Project Draft</td>
+                      <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{subject.classes[0] || '10th A'}</td>
+                      <td style={{ padding: '1rem' }}>Nov 02, 2026</td>
+                      <td style={{ padding: '1rem' }}><span className="badge" style={{ background: 'var(--border-color)', color: 'var(--text-secondary)' }}>Closed</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
 
         {activeTab === 'assessments' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <h2 style={{ fontSize: '1.5rem' }}>Subject Assessments</h2>
               <button className="btn btn-primary" onClick={() => navigate('/app/exams')}>
                 <FilePlus size={18} /> Schedule Assessment
@@ -204,24 +206,26 @@ export function SubjectDetails() {
               <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                 Showing assessments and exams across all classes for {subject.name}.
               </p>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ backgroundColor: 'var(--secondary-color)', borderBottom: '1px solid var(--border-color)' }}>
-                    <th style={{ padding: '1rem' }}>Assessment Title</th>
-                    <th style={{ padding: '1rem' }}>Class</th>
-                    <th style={{ padding: '1rem' }}>Date</th>
-                    <th style={{ padding: '1rem' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem', fontWeight: 500 }}>Midterm Examination</td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{subject.classes[0] || '10th A'}</td>
-                    <td style={{ padding: '1rem' }}>Oct 20, 2026</td>
-                    <td style={{ padding: '1rem' }}><span className="badge badge-warning">Submitted</span></td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="table-responsive">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--secondary-color)', borderBottom: '1px solid var(--border-color)' }}>
+                      <th style={{ padding: '1rem' }}>Assessment Title</th>
+                      <th style={{ padding: '1rem' }}>Class</th>
+                      <th style={{ padding: '1rem' }}>Date</th>
+                      <th style={{ padding: '1rem' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '1rem', fontWeight: 500 }}>Midterm Examination</td>
+                      <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{subject.classes[0] || '10th A'}</td>
+                      <td style={{ padding: '1rem' }}>Oct 20, 2026</td>
+                      <td style={{ padding: '1rem' }}><span className="badge badge-warning">Submitted</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

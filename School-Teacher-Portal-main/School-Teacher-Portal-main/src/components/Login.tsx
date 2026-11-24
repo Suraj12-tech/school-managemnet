@@ -67,26 +67,12 @@ export function Login() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      backgroundColor: 'var(--bg-color)',
-      padding: '1rem',
-      gap: '1rem'
-    }}>
+    <div className="login-container">
       {/* Left Column - Form */}
-      <div style={{ 
-        flex: '1', 
-        display: 'flex', 
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '2rem 4rem',
-        backgroundColor: 'var(--surface-color)',
-        borderRadius: 'var(--radius-xl)'
-      }}>
+      <div className="login-form-col">
         {/* Header */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)' }}>
               SchoolEnterprise
             </h2>
@@ -99,7 +85,7 @@ export function Login() {
             </button>
           </div>
           
-          <h1 style={{ fontSize: '3.5rem', fontWeight: 400, color: 'var(--text-primary)', lineHeight: '1.1', marginBottom: '1rem' }}>
+          <h1 className="login-title">
             {isSignUp ? 'Create an Account' : <>Welcome to <br /> SchoolEnterprise</>}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '400px', marginBottom: '2rem' }}>
@@ -171,15 +157,7 @@ export function Login() {
         </div>
 
         {/* Footer Card */}
-        <div style={{ 
-          marginTop: '4rem',
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          padding: '1rem 1.5rem',
-          backgroundColor: 'var(--bg-color)',
-          borderRadius: 'var(--radius-xl)'
-        }}>
+        <div className="login-footer-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ display: 'flex' }}>
               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid white', marginLeft: '-0px', backgroundColor: '#e2e8f0' }} />
@@ -198,19 +176,7 @@ export function Login() {
       </div>
 
       {/* Right Column - Image & Glass Card */}
-      <div style={{ 
-        flex: '1', 
-        borderRadius: 'var(--radius-xl)',
-        backgroundImage: 'url("/bg-astronaut.png")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'flex-end',
-        padding: '2rem'
-      }}>
+      <div className="login-banner-col">
         <div style={{ 
           position: 'absolute', 
           top: 0, left: 0, right: 0, bottom: 0, 

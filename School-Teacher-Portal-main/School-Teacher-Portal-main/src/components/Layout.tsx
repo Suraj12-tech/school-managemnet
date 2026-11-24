@@ -93,14 +93,7 @@ export function Layout() {
 
       {/* Main Content Area */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
-        <header style={{
-          height: '70px',
-          padding: '0 2rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'transparent'
-        }}>
+        <header className="top-header">
           <button className="mobile-menu-btn btn-icon-circular" style={{ border: 'none' }} onClick={() => setIsSidebarOpen(true)}>
             <Menu size={24} />
           </button>

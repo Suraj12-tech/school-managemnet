@@ -123,7 +123,7 @@ export function StudentProfile() {
       {/* Tab Content */}
       <div style={{ backgroundColor: 'var(--surface-color)' }}>
         {activeTab === 'overview' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
             <div className="card">
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
                 <TrendingUp size={20} /> Overall Performance
@@ -188,34 +188,37 @@ export function StudentProfile() {
               </div>
             </div>
             <h4>Recent Absences</h4>
-            <table style={{ width: '100%', marginTop: '1rem', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                  <th style={{ padding: '0.75rem' }}>Date</th>
-                  <th style={{ padding: '0.75rem' }}>Status</th>
-                  <th style={{ padding: '0.75rem' }}>Reason/Leave</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.75rem' }}>12 Sep 2026</td>
-                  <td style={{ padding: '0.75rem', color: 'var(--danger)' }}>Absent</td>
-                  <td style={{ padding: '0.75rem' }}>Medical Leave (Approved)</td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.75rem' }}>28 Aug 2026</td>
-                  <td style={{ padding: '0.75rem', color: 'var(--danger)' }}>Absent</td>
-                  <td style={{ padding: '0.75rem' }}>Unexcused</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="table-responsive" style={{ marginTop: '1rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.75rem' }}>Date</th>
+                    <th style={{ padding: '0.75rem' }}>Status</th>
+                    <th style={{ padding: '0.75rem' }}>Reason/Leave</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '0.75rem' }}>12 Sep 2026</td>
+                    <td style={{ padding: '0.75rem', color: 'var(--danger)' }}>Absent</td>
+                    <td style={{ padding: '0.75rem' }}>Medical Leave (Approved)</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '0.75rem' }}>28 Aug 2026</td>
+                    <td style={{ padding: '0.75rem', color: 'var(--danger)' }}>Absent</td>
+                    <td style={{ padding: '0.75rem' }}>Unexcused</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {activeTab === 'academics' && (
           <div className="card">
             <h3 style={{ marginBottom: '1.5rem' }}>Subject Performance</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div className="table-responsive">
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ backgroundColor: 'var(--bg-color)', borderBottom: '1px solid var(--border-color)' }}>
                   <th style={{ padding: '1rem' }}>Subject</th>
@@ -244,76 +247,81 @@ export function StudentProfile() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
         {activeTab === 'assignments' && (
           <div className="card">
             <h3 style={{ marginBottom: '1.5rem' }}>Assignments</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg-color)', borderBottom: '1px solid var(--border-color)' }}>
-                  <th style={{ padding: '1rem' }}>Assignment</th>
-                  <th style={{ padding: '1rem' }}>Subject</th>
-                  <th style={{ padding: '1rem' }}>Due Date</th>
-                  <th style={{ padding: '1rem' }}>Status</th>
-                  <th style={{ padding: '1rem' }}>Score</th>
-                  <th style={{ padding: '1rem' }}>Feedback</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assignments.map(a => (
-                  <tr key={a.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem', fontWeight: 500 }}>{a.assignmentTitle}</td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{a.subjectName}</td>
-                    <td style={{ padding: '1rem' }}>{a.dueDate}</td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{ 
-                        color: a.status === 'Submitted' ? 'var(--success)' : a.status === 'Late' ? 'var(--warning)' : 'var(--danger)',
-                        padding: '0.2rem 0.5rem',
-                        backgroundColor: 'var(--bg-color)',
-                        borderRadius: '12px',
-                        fontSize: '0.85rem'
-                      }}>{a.status}</span>
-                    </td>
-                    <td style={{ padding: '1rem', fontWeight: 'bold' }}>{a.score}</td>
-                    <td style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{a.feedback}</td>
+            <div className="table-responsive">
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--bg-color)', borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '1rem' }}>Assignment</th>
+                    <th style={{ padding: '1rem' }}>Subject</th>
+                    <th style={{ padding: '1rem' }}>Due Date</th>
+                    <th style={{ padding: '1rem' }}>Status</th>
+                    <th style={{ padding: '1rem' }}>Score</th>
+                    <th style={{ padding: '1rem' }}>Feedback</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {assignments.map(a => (
+                    <tr key={a.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '1rem', fontWeight: 500 }}>{a.assignmentTitle}</td>
+                      <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{a.subjectName}</td>
+                      <td style={{ padding: '1rem' }}>{a.dueDate}</td>
+                      <td style={{ padding: '1rem' }}>
+                        <span style={{ 
+                          color: a.status === 'Submitted' ? 'var(--success)' : a.status === 'Late' ? 'var(--warning)' : 'var(--danger)',
+                          padding: '0.2rem 0.5rem',
+                          backgroundColor: 'var(--bg-color)',
+                          borderRadius: '12px',
+                          fontSize: '0.85rem'
+                        }}>{a.status}</span>
+                      </td>
+                      <td style={{ padding: '1rem', fontWeight: 'bold' }}>{a.score}</td>
+                      <td style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{a.feedback}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {activeTab === 'exams' && (
           <div className="card">
             <h3 style={{ marginBottom: '1.5rem' }}>Examinations</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg-color)', borderBottom: '1px solid var(--border-color)' }}>
-                  <th style={{ padding: '1rem' }}>Examination</th>
-                  <th style={{ padding: '1rem' }}>Subject</th>
-                  <th style={{ padding: '1rem' }}>Marks</th>
-                  <th style={{ padding: '1rem' }}>Max Marks</th>
-                  <th style={{ padding: '1rem' }}>Percentage</th>
-                  <th style={{ padding: '1rem' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {exams.map(e => (
-                  <tr key={e.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem', fontWeight: 500 }}>{e.examTitle}</td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{e.subjectName}</td>
-                    <td style={{ padding: '1rem', fontWeight: 'bold' }}>{e.marksObtained}</td>
-                    <td style={{ padding: '1rem' }}>{e.maxMarks}</td>
-                    <td style={{ padding: '1rem' }}>{e.percentage}%</td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{ color: e.status === 'Passed' ? 'var(--success)' : 'var(--danger)' }}>{e.status}</span>
-                    </td>
+            <div className="table-responsive">
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--bg-color)', borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '1rem' }}>Examination</th>
+                    <th style={{ padding: '1rem' }}>Subject</th>
+                    <th style={{ padding: '1rem' }}>Marks</th>
+                    <th style={{ padding: '1rem' }}>Max Marks</th>
+                    <th style={{ padding: '1rem' }}>Percentage</th>
+                    <th style={{ padding: '1rem' }}>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {exams.map(e => (
+                    <tr key={e.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '1rem', fontWeight: 500 }}>{e.examTitle}</td>
+                      <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{e.subjectName}</td>
+                      <td style={{ padding: '1rem', fontWeight: 'bold' }}>{e.marksObtained}</td>
+                      <td style={{ padding: '1rem' }}>{e.maxMarks}</td>
+                      <td style={{ padding: '1rem' }}>{e.percentage}%</td>
+                      <td style={{ padding: '1rem' }}>
+                        <span style={{ color: e.status === 'Passed' ? 'var(--success)' : 'var(--danger)' }}>{e.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

@@ -231,6 +231,119 @@ p {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+}
+
+.tabs-nav-scrollable {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+}
+
+.top-header {
+  height: 70px;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+}
+
+@media (max-width: 768px) {
+  .top-header {
+    padding: 0 1rem;
+    height: 60px;
+  }
+}
+
+/* Responsive Login Classes */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  background-color: var(--bg-color);
+  padding: 1rem;
+  gap: 1rem;
+  box-sizing: border-box;
+}
+
+.login-form-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.5rem 4rem;
+  background-color: var(--surface-color);
+  border-radius: var(--radius-xl);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.login-banner-col {
+  flex: 1;
+  border-radius: var(--radius-xl);
+  background-image: url("/bg-astronaut.png");
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2rem;
+  min-height: 520px;
+  box-sizing: border-box;
+}
+
+.login-title {
+  font-size: 3.25rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin-bottom: 1rem;
+}
+
+.login-footer-card {
+  margin-top: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background-color: var(--bg-color);
+  border-radius: var(--radius-xl);
+}
+
+@media (max-width: 1024px) {
+  .login-container {
+    flex-direction: column;
+    padding: 0.75rem;
+  }
+  .login-form-col {
+    padding: 2rem 1.5rem;
+  }
+  .login-banner-col {
+    display: none;
+  }
+  .login-title {
+    font-size: 2.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-form-col {
+    padding: 1.25rem 0.85rem;
+  }
+  .login-title {
+    font-size: 1.75rem;
+  }
+  .login-footer-card {
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+  }
 }
 
 .sidebar-container {
@@ -302,7 +415,7 @@ p {
     height: 100vh;
     width: 260px;
     transform: translateX(-100%);
-    background: var(--surface-color);
+    background: var(--sidebar-bg);
     align-items: stretch;
   }
   .sidebar-container.open {

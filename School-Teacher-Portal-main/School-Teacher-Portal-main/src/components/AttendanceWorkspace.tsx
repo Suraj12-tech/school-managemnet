@@ -141,17 +141,17 @@ export function AttendanceWorkspace() {
         <p>Manage daily attendance, view past records, and request corrections.</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
-        <button className={`btn ${activeTab === 'entry' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('entry')}>
+      <div className="tabs-nav-scrollable" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+        <button className={`btn ${activeTab === 'entry' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setActiveTab('entry')}>
           <Calendar size={18} /> Take Attendance
         </button>
-        <button className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('history')}>
+        <button className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setActiveTab('history')}>
           <Clock size={18} /> History & Stats
         </button>
-        <button className={`btn ${activeTab === 'correction' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('correction')}>
+        <button className={`btn ${activeTab === 'correction' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setActiveTab('correction')}>
           <Edit3 size={18} /> Request Correction
         </button>
-        <button className={`btn ${activeTab === 'correctionHistory' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('correctionHistory')}>
+        <button className={`btn ${activeTab === 'correctionHistory' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setActiveTab('correctionHistory')}>
           <AlertCircle size={18} /> Correction Status
         </button>
       </div>
@@ -159,7 +159,7 @@ export function AttendanceWorkspace() {
       {activeTab === 'entry' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <h2 style={{ fontSize: '1.5rem' }}>Select a Class to Take Attendance</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '1rem' }}>
             {classes.map(c => (
               <div key={c.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
@@ -276,7 +276,7 @@ export function AttendanceWorkspace() {
       {activeTab === 'correctionHistory' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <h2 style={{ fontSize: '1.5rem' }}>Correction Request History</h2>
-          <div className="table-responsive" style={{ backgroundColor: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+          <div className="table-responsive" style={{ backgroundColor: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ backgroundColor: 'var(--secondary-color)', borderBottom: '1px solid var(--border-color)' }}>

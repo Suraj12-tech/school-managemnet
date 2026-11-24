@@ -5,6 +5,7 @@ import { ArrowLeft, BookOpen, Calendar, Users, CheckCircle, Clock, FileText, Ale
 import { LoadingState } from './ui/LoadingState';
 import { ErrorState } from './ui/ErrorState';
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthContext';
 
 
 type Tab = 'overview' | 'submissions' | 'feedback';
@@ -12,6 +13,7 @@ type Tab = 'overview' | 'submissions' | 'feedback';
 export function AssignmentDetails() {
   const { assignmentId } = useParams();
   const navigate = useNavigate();
+  const { currentTeacher } = useAuth();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,8 +64,7 @@ export function AssignmentDetails() {
   if (loading) return <LoadingState message="Loading assignment details..." />;
   if (error || !assignment) return <ErrorState message="Could not load assignment details." action={<button className="btn btn-secondary" onClick={() => navigate('/app/assignments')}>Go Back</button>} />;
 
-  // This legacy mock view has no live assignment/submission authorization contract.
-  const isAuthorized = false;
+  const isAuthorized = currentTeacher?.subjects.includes(assignment.subject);
 
   const totalStudents = assignment.totalStudents || 32;
   const submittedCount = submissions.filter(s => s.status === 'Submitted').length;

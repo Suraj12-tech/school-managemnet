@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite --port 5174 --host\" \"node server.js\"",
     "start": "node server.js",
     "server": "node server.js",
     "build": "tsc -b && vite build",

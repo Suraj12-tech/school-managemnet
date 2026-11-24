@@ -8,14 +8,15 @@ import { StudentProfile } from './components/StudentProfile';
 import { Subjects } from './components/Subjects';
 import { SubjectDetails } from './components/SubjectDetails';
 import { AttendanceWorkspace } from './components/AttendanceWorkspace';
-import { TeachingAssignments } from './components/TeachingAssignments';
-import { TeachingAssignmentDetails } from './components/TeachingAssignmentDetails';
-import { TeacherAssessments } from './components/TeacherAssessments';
-import { TeacherAssessmentDetails } from './components/TeacherAssessmentDetails';
+import { Exams } from './components/Exams';
+import { ExamDetails } from './components/ExamDetails';
+import { Assignments } from './components/Assignments';
+import { AssignmentDetails } from './components/AssignmentDetails';
 import { ReportsWorkspace } from './components/ReportsWorkspace';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { PublicDirectory } from './components/PublicDirectory';
 
 function App() {
   return (
@@ -23,7 +24,7 @@ function App() {
       <AuthProvider>
         <HashRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<PublicDirectory />} />
           <Route path="/login" element={<Login />} />
           <Route path="/app" element={<ProtectedRoute />}>
             <Route element={<Layout />}>
@@ -31,13 +32,18 @@ function App() {
               <Route path="classes" element={<Classes />} />
               <Route path="classes/:classId" element={<ClassDetails />} />
               <Route path="classes/:classId/student/:studentId" element={<StudentProfile />} />
+              
               <Route path="subjects" element={<Subjects />} />
               <Route path="subjects/:subjectId" element={<SubjectDetails />} />
+              
               <Route path="attendance" element={<AttendanceWorkspace />} />
-              <Route path="teaching-assignments" element={<TeachingAssignments />} />
-              <Route path="teaching-assignments/:assignmentId" element={<TeachingAssignmentDetails />} />
-              <Route path="assessments" element={<TeacherAssessments />} />
-              <Route path="assessments/:assessmentId" element={<TeacherAssessmentDetails />} />
+              
+              <Route path="assignments" element={<Assignments />} />
+              <Route path="assignments/:assignmentId" element={<AssignmentDetails />} />
+              
+              <Route path="exams" element={<Exams />} />
+              <Route path="exams/:examId" element={<ExamDetails />} />
+              
               <Route path="reports" element={<ReportsWorkspace />} />
             </Route>
           </Route>

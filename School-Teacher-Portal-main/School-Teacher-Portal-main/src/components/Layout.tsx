@@ -4,10 +4,7 @@ import {
   LayoutDashboard, 
   Users, 
   BookOpen, 
-  CalendarCheck,
-  ClipboardList,
-  ClipboardCheck,
-  BarChart3,
+  ClipboardList, 
   LogOut,
   Bell,
   Menu,
@@ -19,17 +16,10 @@ export function Layout() {
   const navigate = useNavigate();
   const { currentTeacher, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [logoutError, setLogoutError] = useState("");
 
-  const handleLogout = async () => {
-    setLogoutError("");
-    try {
-      await logout();
-    } catch (error) {
-      setLogoutError(error instanceof Error ? error.message : "Server logout failed.");
-    } finally {
-      navigate('/login');
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -64,16 +54,16 @@ export function Layout() {
             <BookOpen size={20} /> <span className="sidebar-text">My Subjects</span>
           </NavLink>
           <NavLink onClick={() => setIsSidebarOpen(false)} to="/app/attendance" className={({isActive}) => `btn btn-secondary ${isActive ? 'nav-link-active' : ''}`} style={{ border: 'none' }}>
-            <CalendarCheck size={20} /> <span className="sidebar-text">Attendance</span>
+            <ClipboardList size={20} /> <span className="sidebar-text">Attendance</span>
           </NavLink>
-          <NavLink onClick={() => setIsSidebarOpen(false)} to="/app/teaching-assignments" className={({isActive}) => `btn btn-secondary ${isActive ? 'nav-link-active' : ''}`} style={{ border: 'none' }}>
-            <ClipboardList size={20} /> <span className="sidebar-text">My Assignments</span>
+          <NavLink onClick={() => setIsSidebarOpen(false)} to="/app/assignments" className={({isActive}) => `btn btn-secondary ${isActive ? 'nav-link-active' : ''}`} style={{ border: 'none' }}>
+            <BookOpen size={20} /> <span className="sidebar-text">Assignments</span>
           </NavLink>
-          <NavLink onClick={() => setIsSidebarOpen(false)} to="/app/assessments" className={({isActive}) => `btn btn-secondary ${isActive ? 'nav-link-active' : ''}`} style={{ border: 'none' }}>
-            <ClipboardCheck size={20} /> <span className="sidebar-text">Exams & Assessments</span>
+          <NavLink onClick={() => setIsSidebarOpen(false)} to="/app/exams" className={({isActive}) => `btn btn-secondary ${isActive ? 'nav-link-active' : ''}`} style={{ border: 'none' }}>
+            <ClipboardList size={20} /> <span className="sidebar-text">Exams & Marks</span>
           </NavLink>
           <NavLink onClick={() => setIsSidebarOpen(false)} to="/app/reports" className={({isActive}) => `btn btn-secondary ${isActive ? 'nav-link-active' : ''}`} style={{ border: 'none' }}>
-            <BarChart3 size={20} /> <span className="sidebar-text">Reports</span>
+            <LayoutDashboard size={20} /> <span className="sidebar-text">Reports</span>
           </NavLink>
         </nav>
 
@@ -88,12 +78,10 @@ export function Layout() {
             alignItems: 'center',
             gap: '1rem'
           }}>
-            <div aria-hidden="true" style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)', display: 'grid', placeItems: 'center', color: 'white' }}>
-              {currentTeacher.fullName.slice(0, 1).toUpperCase()}
-            </div>
+            <img src={currentTeacher.avatar} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)' }} />
             <div className="sidebar-text" style={{ flex: 1, overflow: 'hidden' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.875rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'white' }}>{currentTeacher.fullName}</div>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>{currentTeacher.employeeId}</div>
+              <div style={{ fontWeight: 600, fontSize: '0.875rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'white' }}>{currentTeacher.name}</div>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>{currentTeacher.role}</div>
             </div>
           </div>
         )}
@@ -124,7 +112,6 @@ export function Layout() {
         </header>
 
         <div className="animate-fade-in main-content" style={{ padding: '2rem', flex: 1, overflowY: 'auto' }}>
-          {logoutError && <p className="error" role="alert">{logoutError}</p>}
           <Outlet />
         </div>
       </main>

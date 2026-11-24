@@ -111,7 +111,7 @@ export function ExamDetails() {
       originalScore: marks[correctionStudent.id] === '' ? null : Number(marks[correctionStudent.id]),
       requestedScore: Number(correctionScore),
       reason: correctionReason,
-      requestedBy: currentTeacher?.fullName || 'Unknown'
+      requestedBy: currentTeacher?.name || 'Unknown'
     });
     
     showNotification('Correction request submitted and pending approval!', 'success');
@@ -132,8 +132,8 @@ export function ExamDetails() {
   if (error || !exam) return <ErrorState message="Could not load exam details." action={<button className="btn btn-secondary" onClick={() => navigate('/app/exams')}>Go Back</button>} />;
 
   const isEditable = exam.status === 'Draft';
-  // This legacy mock view has no live marks authorization contract.
-  const isAuthorized = false;
+  // Check authorization: Must be the specific subject teacher to enter marks
+  const isAuthorized = currentTeacher?.subjects.includes(exam.subject);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -211,7 +211,7 @@ export function ExamDetails() {
                       )}
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
-                      {isAuthorized && !isEditable && exam.status !== 'Draft' && (
+                      {(!isEditable || !isAuthorized) && exam.status !== 'Draft' && (
                         <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }} onClick={() => openCorrection(s)}>
                           <RefreshCw size={14} style={{ marginRight: '0.25rem' }} /> Request Correction
                         </button>

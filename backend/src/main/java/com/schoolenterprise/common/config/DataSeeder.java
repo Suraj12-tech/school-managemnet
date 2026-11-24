@@ -29,6 +29,12 @@ import com.schoolenterprise.staff.entity.Staff;
 import com.schoolenterprise.staff.entity.TeacherAssignment;
 import com.schoolenterprise.staff.repository.StaffRepository;
 import com.schoolenterprise.staff.repository.TeacherAssignmentRepository;
+import com.schoolenterprise.academics.entity.Subject;
+import com.schoolenterprise.academics.entity.TimetableEntry;
+import com.schoolenterprise.academics.repository.SubjectRepository;
+import com.schoolenterprise.academics.repository.TimetableEntryRepository;
+import com.schoolenterprise.assessment.entity.Assessment;
+import com.schoolenterprise.assessment.repository.AssessmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +43,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
@@ -74,6 +81,9 @@ public class DataSeeder implements CommandLineRunner {
     private final ClassHistoryRepository classHistoryRepository;
     private final GuardianRepository guardianRepository;
     private final StudentGuardianRepository studentGuardianRepository;
+    private final SubjectRepository subjectRepository;
+    private final AssessmentRepository assessmentRepository;
+    private final TimetableEntryRepository timetableEntryRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -98,6 +108,7 @@ public class DataSeeder implements CommandLineRunner {
         userRepository.findByUsername("teacher")
                 .ifPresent(teacher -> ensureDemoTeacherWorkflow(teacher, school, academicYear));
         seedDemoPromotionData(school, academicYear);
+        seedTeacherPortalMockData(school, academicYear, classTeacher, subjectTeacher);
 
         if (userRepository.findByUsername("admin").isEmpty()) {
             AppUser admin = new AppUser();
@@ -625,6 +636,352 @@ public class DataSeeder implements CommandLineRunner {
             existingEnrollment.setStatus("ENROLLED");
             existingEnrollment.setEnrolledOn(existingTargetYear.getStartDate());
             enrollmentRepository.save(existingEnrollment);
+        }
+    }
+
+    private void seedTeacherPortalMockData(School school, AcademicYear year, Role classTeacherRole, Role subjectTeacherRole) {
+        String[][] subjectsData = {
+                {"Mathematics", "MATH", "Core Mathematics and Algebra"},
+                {"Physics", "PHYS", "General Physics and Mechanics"},
+                {"Chemistry", "CHEM", "General Chemistry"},
+                {"Biology", "BIO", "Living Systems and Ecology"},
+                {"English Lit", "ENG", "English Language and Literature"},
+                {"History", "HIST", "World and Regional History"},
+                {"Economics", "ECON", "Micro and Macro Economics"},
+                {"Accountancy", "ACCT", "Financial and Management Accounting"},
+                {"Computer Science", "CS", "Programming and Data Fundamentals"},
+                {"General", "GEN", "General Studies"}
+        };
+        Map<String, Subject> subjectMap = new java.util.HashMap<>();
+        for (String[] sData : subjectsData) {
+            String name = sData[0];
+            String code = sData[1];
+            Subject subject = subjectRepository.findBySchoolId(school.getId()).stream()
+                    .filter(s -> s.getName().equalsIgnoreCase(name) || s.getCode().equalsIgnoreCase(code))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        Subject s = new Subject();
+                        s.setSchoolId(school.getId());
+                        s.setName(name);
+                        s.setCode(code);
+                        s.setDescription(sData[2]);
+                        s.setStatus("ACTIVE");
+                        return subjectRepository.save(s);
+                    });
+            subjectMap.put(name, subject);
+        }
+
+        SchoolClass grade10 = classRepository.findBySchoolId(school.getId()).stream()
+                .filter(c -> "Grade 10".equalsIgnoreCase(c.getName()))
+                .findFirst()
+                .orElseGet(() -> {
+                    SchoolClass c = new SchoolClass();
+                    c.setSchoolId(school.getId());
+                    c.setName("Grade 10");
+                    c.setNumberOfClassrooms(3);
+                    return classRepository.save(c);
+                });
+
+        SchoolClass grade11 = classRepository.findBySchoolId(school.getId()).stream()
+                .filter(c -> "Grade 11".equalsIgnoreCase(c.getName()))
+                .findFirst()
+                .orElseGet(() -> {
+                    SchoolClass c = new SchoolClass();
+                    c.setSchoolId(school.getId());
+                    c.setName("Grade 11");
+                    c.setNumberOfClassrooms(2);
+                    return classRepository.save(c);
+                });
+
+        Section sec10A = getOrCreateSection(grade10.getId(), "A", year.getId());
+        Section sec10B = getOrCreateSection(grade10.getId(), "B", year.getId());
+        Section sec10C = getOrCreateSection(grade10.getId(), "C", year.getId());
+        Section sec11Sci = getOrCreateSection(grade11.getId(), "Science", year.getId());
+        Section sec11Com = getOrCreateSection(grade11.getId(), "Commerce", year.getId());
+
+        Staff amit = seedStaffMember("amit.sharma", "amit.sharma@school.edu", "Mr. Amit Sharma", "password123",
+                "EMP-T001", "Class Teacher", classTeacherRole);
+        sec10A.setClassTeacherStaffId(amit.getId());
+        sectionRepository.save(sec10A);
+
+        Staff sneha = seedStaffMember("sneha.patil", "sneha.patil@school.edu", "Ms. Sneha Patil", "password123",
+                "EMP-T002", "Subject Teacher", subjectTeacherRole);
+
+        Staff neha = seedStaffMember("neha.gupta", "neha.gupta@school.edu", "Mrs. Neha Gupta", "password123",
+                "EMP-T003", "Subject Teacher", subjectTeacherRole);
+
+        Staff rohan = seedStaffMember("rohan.desai", "rohan.desai@school.edu", "Mr. Rohan Desai", "password123",
+                "EMP-T004", "Subject Teacher", subjectTeacherRole);
+
+        Staff priya = seedStaffMember("priya.iyer", "priya.iyer@school.edu", "Ms. Priya Iyer", "password123",
+                "EMP-T005", "Subject Teacher", subjectTeacherRole);
+
+        ensureAssignment(amit.getId(), grade10.getId(), sec10A.getId(), year.getId(), "CLASS_TEACHER", null);
+        if (subjectMap.containsKey("Mathematics")) {
+            ensureAssignment(amit.getId(), grade10.getId(), sec10A.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("Mathematics").getId());
+            ensureAssignment(amit.getId(), grade11.getId(), sec11Sci.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("Mathematics").getId());
+        }
+        if (subjectMap.containsKey("English Lit")) {
+            ensureAssignment(sneha.getId(), grade10.getId(), sec10B.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("English Lit").getId());
+        }
+        if (subjectMap.containsKey("History")) {
+            ensureAssignment(sneha.getId(), grade11.getId(), sec11Com.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("History").getId());
+        }
+        if (subjectMap.containsKey("Chemistry")) {
+            ensureAssignment(neha.getId(), grade10.getId(), sec10C.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("Chemistry").getId());
+        }
+        if (subjectMap.containsKey("Biology")) {
+            ensureAssignment(neha.getId(), grade11.getId(), sec11Sci.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("Biology").getId());
+        }
+        if (subjectMap.containsKey("Economics")) {
+            ensureAssignment(rohan.getId(), grade10.getId(), sec10A.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("Economics").getId());
+        }
+        if (subjectMap.containsKey("Accountancy")) {
+            ensureAssignment(rohan.getId(), grade11.getId(), sec11Com.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("Accountancy").getId());
+        }
+        if (subjectMap.containsKey("Computer Science")) {
+            ensureAssignment(priya.getId(), grade10.getId(), sec10B.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("Computer Science").getId());
+        }
+        if (subjectMap.containsKey("Mathematics")) {
+            ensureAssignment(priya.getId(), grade11.getId(), sec11Com.getId(), year.getId(), "SUBJECT_TEACHER", subjectMap.get("Mathematics").getId());
+        }
+
+        String[][] studentsData = {
+                {"S1", "Akhankhya", "Patel", "FEMALE", "10A"},
+                {"S2", "Anannya", "Das", "FEMALE", "10A"},
+                {"S3", "Anmool", "Behera", "MALE", "10A"},
+                {"S4", "Ansuman", "Priyadarshi", "MALE", "10A"},
+                {"S5", "Balram", "Khamari", "MALE", "10A"},
+                {"S6", "Basundhara", "Pradhan", "FEMALE", "10A"},
+                {"S7", "Lizarani", "Jena", "FEMALE", "10A"},
+                {"S8", "Manas", "Patra", "MALE", "10A"},
+                {"S9", "Monalisa", "Gordia", "FEMALE", "10A"},
+                {"S10", "Monica", "Ekka", "FEMALE", "10A"},
+                {"S11", "Pritam", "Ghadei", "MALE", "10A"},
+                {"S12", "Somya", "Sahu", "MALE", "10A"},
+                {"S13", "Subhrajit", "Jena", "MALE", "10A"},
+                {"S14", "Tamanna", "Sharma", "FEMALE", "10A"},
+                {"S15", "Baby", "Munda", "FEMALE", "10B"},
+                {"S16", "Bandita", "Naik", "FEMALE", "10B"},
+                {"S17", "Pratap", "Pati", "MALE", "10B"},
+                {"S18", "Deepika", "Kerketa", "FEMALE", "10B"},
+                {"S19", "Rajesh", "Ojha", "MALE", "10B"},
+                {"S20", "Sritam", "Behera", "MALE", "10B"},
+                {"S21", "Basundhra", "Puala", "FEMALE", "10C"},
+                {"S22", "Munu", "Chinera", "MALE", "10C"},
+                {"S23", "Jyotirmayee", "Jena", "FEMALE", "10C"},
+                {"S24", "Ankita", "Behera", "FEMALE", "10C"},
+                {"S25", "Arghya", "Nayak", "FEMALE", "10C"},
+                {"S26", "Dibyaranjan", "Bhoi", "MALE", "11Sci"},
+                {"S27", "Dinesh", "Barik", "MALE", "11Sci"},
+                {"S28", "Sabyasachi", "Barik", "MALE", "11Sci"},
+                {"S29", "Shakti", "Patra", "MALE", "11Com"},
+                {"S30", "Kausiknanda", "Nalia", "MALE", "11Com"}
+        };
+
+        for (String[] st : studentsData) {
+            String admNo = st[0];
+            String firstName = st[1];
+            String lastName = st[2];
+            String gender = st[3];
+            String targetSec = st[4];
+
+            Section sec = switch (targetSec) {
+                case "10A" -> sec10A;
+                case "10B" -> sec10B;
+                case "10C" -> sec10C;
+                case "11Sci" -> sec11Sci;
+                case "11Com" -> sec11Com;
+                default -> sec10A;
+            };
+            SchoolClass cls = targetSec.startsWith("11") ? grade11 : grade10;
+
+            if (studentRepository.findByAdmissionNumber(admNo).isEmpty()) {
+                Student s = new Student();
+                s.setAdmissionNumber(admNo);
+                s.setFirstName(firstName);
+                s.setLastName(lastName);
+                s.setDateOfBirth(LocalDate.of(2009, 5, 15));
+                s.setGender(gender);
+                s.setEmail(firstName.toLowerCase() + "." + lastName.toLowerCase() + "@school.edu");
+                s.setStatus("ACTIVE");
+                s.setCurrentSectionId(sec.getId());
+                s = studentRepository.save(s);
+
+                Enrollment enr = new Enrollment();
+                enr.setStudentId(s.getId());
+                enr.setSectionId(sec.getId());
+                enr.setAcademicYearId(year.getId());
+                enr.setStatus("ENROLLED");
+                enr.setEnrolledOn(LocalDate.now());
+                enrollmentRepository.save(enr);
+
+                ClassHistory hist = new ClassHistory();
+                hist.setStudentId(s.getId());
+                hist.setClassId(cls.getId());
+                hist.setSectionId(sec.getId());
+                hist.setAcademicYearId(year.getId());
+                hist.setResultStatus("ONGOING");
+                classHistoryRepository.save(hist);
+
+                Guardian guardian = new Guardian();
+                guardian.setFullName(lastName + " Guardian");
+                guardian.setRelationType("FEMALE".equals(gender) ? "MOTHER" : "FATHER");
+                guardian.setEmail("guardian." + admNo.toLowerCase() + "@school.edu");
+                guardian.setStatus("ACTIVE");
+                guardian = guardianRepository.save(guardian);
+
+                StudentGuardian link = new StudentGuardian();
+                link.setStudentId(s.getId());
+                link.setGuardianId(guardian.getId());
+                link.setRelationshipType(guardian.getRelationType());
+                link.setPrimaryGuardian(true);
+                link.setEmergencyContact(true);
+                studentGuardianRepository.save(link);
+            }
+        }
+
+        if (subjectMap.containsKey("Mathematics")) {
+            ensureAssessment("Mid-Term Assessment", grade10.getId(), sec10A.getId(),
+                    subjectMap.get("Mathematics").getId(), year.getId(), LocalDate.of(2026, 10, 15),
+                    new BigDecimal("100"), "PUBLISHED");
+            ensureAssessment("Unit Test 1", grade10.getId(), sec10A.getId(),
+                    subjectMap.get("Mathematics").getId(), year.getId(), LocalDate.of(2026, 9, 5),
+                    new BigDecimal("50"), "PUBLISHED");
+        }
+        if (subjectMap.containsKey("Physics")) {
+            ensureAssessment("Mid-Term Assessment", grade11.getId(), sec11Sci.getId(),
+                    subjectMap.get("Physics").getId(), year.getId(), LocalDate.of(2026, 10, 18),
+                    new BigDecimal("100"), "DRAFT");
+        }
+
+        if (subjectMap.containsKey("Mathematics")) {
+            ensureTimetable(school.getId(), grade10.getId(), sec10A.getId(), year.getId(),
+                    "MONDAY", 1, "Period 1", "09:00", "09:45",
+                    subjectMap.get("Mathematics").getId(), amit.getId(), "Room 101");
+            ensureTimetable(school.getId(), grade10.getId(), sec10A.getId(), year.getId(),
+                    "TUESDAY", 2, "Period 2", "09:50", "10:35",
+                    subjectMap.get("Mathematics").getId(), amit.getId(), "Room 101");
+            ensureTimetable(school.getId(), grade11.getId(), sec11Sci.getId(), year.getId(),
+                    "WEDNESDAY", 3, "Period 3", "10:50", "11:35",
+                    subjectMap.get("Mathematics").getId(), amit.getId(), "Science Lab 1");
+        }
+
+        log.info("Ensured full unified Teacher Portal mock data in backend database.");
+    }
+
+    private Section getOrCreateSection(Long classId, String sectionName, Long yearId) {
+        return sectionRepository.findByClassId(classId).stream()
+                .filter(s -> yearId.equals(s.getAcademicYearId()) && s.getName().equalsIgnoreCase(sectionName))
+                .findFirst()
+                .orElseGet(() -> {
+                    Section s = new Section();
+                    s.setClassId(classId);
+                    s.setName(sectionName);
+                    s.setAcademicYearId(yearId);
+                    s.setStatus("ACTIVE");
+                    return sectionRepository.save(s);
+                });
+    }
+
+    private Staff seedStaffMember(String username, String email, String fullName, String password,
+                                  String employeeId, String designation, Role role) {
+        AppUser user = userRepository.findByUsername(username).orElseGet(() -> {
+            AppUser u = new AppUser();
+            u.setUsername(username);
+            u.setEmail(email);
+            u.setPasswordHash(passwordEncoder.encode(password));
+            u.setFullName(fullName);
+            u.setStatus("ACTIVE");
+            u.setRoles(Set.of(role));
+            return userRepository.save(u);
+        });
+
+        Staff staff = staffRepository.findAllByUserId(user.getId()).stream().findFirst().orElseGet(() ->
+                staffRepository.findByEmployeeId(employeeId).orElseGet(() -> {
+                    Staff st = new Staff();
+                    st.setUserId(user.getId());
+                    st.setEmployeeId(employeeId);
+                    st.setFullName(fullName);
+                    st.setEmail(email);
+                    st.setDesignation(designation);
+                    st.setStatus("ACTIVE");
+                    st.setStaffCategory("TEACHING");
+                    return staffRepository.save(st);
+                })
+        );
+        if (staff.getUserId() == null) {
+            staff.setUserId(user.getId());
+            staff = staffRepository.save(staff);
+        }
+        return staff;
+    }
+
+    private void ensureAssignment(Long staffId, Long classId, Long sectionId, Long yearId, String type, Long subjectId) {
+        boolean exists = teacherAssignmentRepository.findByStaffId(staffId).stream()
+                .anyMatch(a -> a.getClassId().equals(classId)
+                        && (sectionId == null || sectionId.equals(a.getSectionId()))
+                        && yearId.equals(a.getAcademicYearId())
+                        && type.equals(a.getAssignmentType())
+                        && (subjectId == null || subjectId.equals(a.getSubjectId())));
+        if (!exists) {
+            TeacherAssignment ta = new TeacherAssignment();
+            ta.setStaffId(staffId);
+            ta.setClassId(classId);
+            ta.setSectionId(sectionId);
+            ta.setAcademicYearId(yearId);
+            ta.setAssignmentType(type);
+            ta.setSubjectId(subjectId);
+            ta.setStatus("ACTIVE");
+            teacherAssignmentRepository.save(ta);
+        }
+    }
+
+    private void ensureAssessment(String title, Long classId, Long sectionId, Long subjectId, Long yearId,
+                                  LocalDate date, BigDecimal maxMarks, String status) {
+        boolean exists = assessmentRepository.findAll().stream()
+                .anyMatch(a -> a.getTitle().equalsIgnoreCase(title)
+                        && a.getClassId().equals(classId)
+                        && (sectionId == null || sectionId.equals(a.getSectionId()))
+                        && a.getSubjectId().equals(subjectId)
+                        && a.getAcademicYearId().equals(yearId));
+        if (!exists) {
+            Assessment a = new Assessment();
+            a.setTitle(title);
+            a.setClassId(classId);
+            a.setSectionId(sectionId);
+            a.setSubjectId(subjectId);
+            a.setAcademicYearId(yearId);
+            a.setAssessmentDate(date);
+            a.setMaxMarks(maxMarks);
+            a.setStatus(status);
+            assessmentRepository.save(a);
+        }
+    }
+
+    private void ensureTimetable(Long schoolId, Long classId, Long sectionId, Long yearId,
+                                 String dayOfWeek, int periodNumber, String periodName,
+                                 String startTime, String endTime, Long subjectId, Long staffId, String room) {
+        boolean exists = timetableEntryRepository.findByStaffIdAndAcademicYearId(staffId, yearId).stream()
+                .anyMatch(t -> t.getDayOfWeek().equalsIgnoreCase(dayOfWeek)
+                        && t.getPeriodNumber().equals(periodNumber)
+                        && t.getSectionId().equals(sectionId));
+        if (!exists) {
+            TimetableEntry t = new TimetableEntry();
+            t.setSchoolId(schoolId);
+            t.setClassId(classId);
+            t.setSectionId(sectionId);
+            t.setAcademicYearId(yearId);
+            t.setDayOfWeek(dayOfWeek);
+            t.setPeriodNumber(periodNumber);
+            t.setPeriodName(periodName);
+            t.setStartTime(startTime);
+            t.setEndTime(endTime);
+            t.setSubjectId(subjectId);
+            t.setStaffId(staffId);
+            t.setRoom(room);
+            t.setStatus("ACTIVE");
+            timetableEntryRepository.save(t);
         }
     }
 }

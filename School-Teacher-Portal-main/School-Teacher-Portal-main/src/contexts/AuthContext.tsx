@@ -1,74 +1,40 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { clearToken, getToken } from "../services/apiClient";
-import { teacherApi, type TeacherProfile } from "../services/teacherApi";
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import type { Teacher } from '../services/mockData';
 
 interface AuthContextType {
-  currentTeacher: TeacherProfile | null;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+  currentTeacher: Teacher | null;
+  login: (teacher: Teacher) => void;
+  logout: () => void;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentTeacher, setCurrentTeacher] = useState<TeacherProfile | null>(null);
+  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
-    const expireSession = () => {
-      clearToken();
-      setCurrentTeacher(null);
-    };
-    window.addEventListener("teacher:session-expired", expireSession);
-
-    if (!getToken()) {
-      setIsLoading(false);
-      return () => window.removeEventListener("teacher:session-expired", expireSession);
+    // Try to load user from localStorage on mount
+    const storedTeacher = localStorage.getItem('school_teacher_auth');
+    if (storedTeacher) {
+      try {
+        setCurrentTeacher(JSON.parse(storedTeacher));
+      } catch (e) {
+        console.error('Failed to parse auth token');
+      }
     }
-
-    teacherApi.profile()
-      .then(profile => {
-        if (mounted) setCurrentTeacher(profile);
-      })
-      .catch(() => {
-        clearToken();
-        if (mounted) setCurrentTeacher(null);
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-      window.removeEventListener("teacher:session-expired", expireSession);
-    };
+    setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
-    await teacherApi.login({ username, password });
-    try {
-      const profile = await teacherApi.profile();
-      setCurrentTeacher(profile);
-    } catch (error) {
-      try {
-        await teacherApi.logout();
-      } finally {
-        clearToken();
-        setCurrentTeacher(null);
-      }
-      throw error;
-    }
+  const login = (teacher: Teacher) => {
+    setCurrentTeacher(teacher);
+    localStorage.setItem('school_teacher_auth', JSON.stringify(teacher));
   };
 
-  const logout = async () => {
-    try {
-      if (getToken()) await teacherApi.logout();
-    } finally {
-      clearToken();
-      setCurrentTeacher(null);
-    }
+  const logout = () => {
+    setCurrentTeacher(null);
+    localStorage.removeItem('school_teacher_auth');
   };
 
   return (
@@ -81,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

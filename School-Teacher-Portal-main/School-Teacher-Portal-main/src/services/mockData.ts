@@ -1,9 +1,5 @@
 import db from '../../db.json';
 
-if (import.meta.env.PROD || import.meta.env.VITE_TEACHER_PORTAL_MODE === "integrated") {
-  throw new Error("The legacy mock-data service is disabled in integrated and production builds.");
-}
-
 export interface Teacher {
   id: string;
   name: string;
@@ -112,9 +108,8 @@ export interface ClassSubject {
   pendingActivity: string;
 }
 
-// IMPORTANT: Replace this with your live Render Web Service URL (e.g. 'https://school-teacher-portal-backend.onrender.com')
-// Local testing: 'http://localhost:3000'
-const API_URL = 'YOUR_RENDER_URL_HERE';
+// Local testing: 'http://localhost:3000', or configurable via VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export const getTeachers = async (): Promise<Teacher[]> => {
   try {
@@ -236,6 +231,28 @@ export const createExam = async (data: Omit<Exam, 'id'>): Promise<Exam> => {
     return await res.json();
   } catch (error) {
     return { ...data, id: `E${Date.now()}` } as Exam;
+  }
+};
+
+export const saveAttendance = async (classId: string, records: any[], period?: string, date?: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_URL}/attendance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classId, date: date || new Date().toISOString(), period, records, id: `ATT${Date.now()}` }),
+    });
+    if (!res.ok) throw new Error('API failed');
+    return await res.json();
+  } catch (error) {
+    const d = date || new Date().toISOString().split('T')[0];
+    const p = period || 'Morning';
+    const existing = (db as any).attendance || [];
+    const isDuplicate = existing.some((a: any) => a.classId === classId && a.date.startsWith(d) && a.period === p);
+    if (isDuplicate) throw new Error('Attendance already submitted for this period and date.');
+    
+    existing.push({ id: `ATT${Date.now()}`, classId, date: d, period: p, records, status: 'Submitted' });
+    (db as any).attendance = existing;
+    return { success: true };
   }
 };
 
@@ -388,6 +405,41 @@ export const getClass = async (id: string): Promise<ClassInfo | null> => {
     academicYear: cls.academicYear || '2026-2027',
     currentTerm: cls.currentTerm || 'Term 1'
   };
+};
+
+export const getAttendanceHistory = async (): Promise<any[]> => {
+  try {
+    const res = await fetch(`${API_URL}/attendance`);
+    if (!res.ok) throw new Error('API failed');
+    return await res.json();
+  } catch (error) {
+    console.warn('Falling back to local db.json for attendance history');
+    return (db as any).attendance || [];
+  }
+};
+
+export const getAttendanceCorrections = async (): Promise<any[]> => {
+  try {
+    const res = await fetch(`${API_URL}/attendanceCorrections`);
+    if (!res.ok) throw new Error('API failed');
+    return await res.json();
+  } catch (error) {
+    return (db as any).attendanceCorrections || [];
+  }
+};
+
+export const saveAttendanceCorrection = async (correction: any): Promise<any> => {
+  try {
+    const res = await fetch(`${API_URL}/attendanceCorrections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...correction, id: `CORR${Date.now()}` }),
+    });
+    if (!res.ok) throw new Error('API failed');
+    return await res.json();
+  } catch (error) {
+    return { success: true };
+  }
 };
 
 export const getClassSubjects = async (_classId: string): Promise<ClassSubject[]> => {

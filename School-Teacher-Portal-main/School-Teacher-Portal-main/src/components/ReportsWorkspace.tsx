@@ -1,158 +1,313 @@
-import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
-import { BarChart3, BookOpen, CalendarCheck, ClipboardList } from "lucide-react";
-import { teacherApi, type TeacherReport, type TeacherSection } from "../services/teacherApi";
-import { EmptyState } from "./ui/EmptyState";
-import { ErrorState } from "./ui/ErrorState";
-import { LoadingState } from "./ui/LoadingState";
-
-function localDate(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+import { useState } from 'react';
+import { BarChart3, TrendingUp, TrendingDown, Users, AlertCircle } from 'lucide-react';
 
 export function ReportsWorkspace() {
-  const today = localDate(new Date());
-  const [sections, setSections] = useState<TeacherSection[]>([]);
-  const [sectionId, setSectionId] = useState("");
-  const [fromDate, setFromDate] = useState(today);
-  const [toDate, setToDate] = useState(today);
-  const [report, setReport] = useState<TeacherReport | null>(null);
-  const [loadingSections, setLoadingSections] = useState(true);
-  const [loadingReport, setLoadingReport] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    teacherApi.sections()
-      .then(availableSections => {
-        setSections(availableSections);
-        if (availableSections.length > 0) setSectionId(String(availableSections[0].id));
-      })
-      .catch(reason => setError(reason instanceof Error ? reason.message : "Could not load authorized sections."))
-      .finally(() => setLoadingSections(false));
-  }, []);
-
-  const loadReport = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const selectedSectionId = Number(sectionId);
-    if (!Number.isSafeInteger(selectedSectionId) || selectedSectionId <= 0 || !fromDate || !toDate) {
-      setError("Choose an authorized section and a valid date range.");
-      return;
-    }
-    if (fromDate > toDate) {
-      setError("The start date must be on or before the end date.");
-      return;
-    }
-
-    setError("");
-    setLoadingReport(true);
-    setReport(null);
-    try {
-      setReport(await teacherApi.reports(selectedSectionId, fromDate, toDate));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not load the report.");
-    } finally {
-      setLoadingReport(false);
-    }
-  };
-
-  if (loadingSections) return <LoadingState message="Loading your authorized sections..." />;
-  if (error && sections.length === 0) return <ErrorState message={error} />;
+  const [activeTab, setActiveTab] = useState<'subject' | 'class'>('class');
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div>
-        <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>Reports & Analytics</h1>
-        <p style={{ color: "var(--text-secondary)" }}>
-          Attendance totals, active teaching assignments, and published assessments from your current authorized scope.
-        </p>
+        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Academic Reports & Analytics</h1>
+        <p style={{ color: 'var(--text-secondary)' }}>Actionable insights to answer practical questions about your classes and subjects.</p>
       </div>
 
-      {sections.length === 0 ? (
-        <EmptyState icon={<BarChart3 size={40} />} title="No authorized sections"
-          description="Reports are available for sections in your active teaching assignments." />
-      ) : (
-        <>
-          <form className="card" onSubmit={loadReport}
-            style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "end" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-              Section
-              <select className="input-field" value={sectionId} onChange={event => setSectionId(event.target.value)}>
-                {sections.map(section => <option key={section.id} value={section.id}>{section.name}</option>)}
-              </select>
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-              From
-              <input className="input-field" type="date" value={fromDate}
-                onChange={event => setFromDate(event.target.value)} required />
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-              To
-              <input className="input-field" type="date" value={toDate}
-                onChange={event => setToDate(event.target.value)} required />
-            </label>
-            <button className="btn btn-primary" type="submit" disabled={loadingReport}>
-              {loadingReport ? "Loading..." : "Generate report"}
-            </button>
-          </form>
+      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+        <button 
+          className={`btn ${activeTab === 'class' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('class')}
+          style={{ border: activeTab === 'class' ? undefined : 'none' }}
+        >
+          <Users size={18} /> Class Performance
+        </button>
+        <button 
+          className={`btn ${activeTab === 'subject' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('subject')}
+          style={{ border: activeTab === 'subject' ? undefined : 'none' }}
+        >
+          <BarChart3 size={18} /> Subject Performance
+        </button>
+      </div>
 
-          {error && <ErrorState message={error} />}
-          {loadingReport && <LoadingState message="Generating your report..." />}
-          {report && (
-            <>
-              <section className="card">
-                <h2 style={{ marginTop: 0 }}><CalendarCheck size={20} /> Attendance summary</h2>
-                <p>{report.attendance.fromDate} to {report.attendance.toDate}</p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
-                  {[
-                    ["Present", report.attendance.present],
-                    ["Absent", report.attendance.absent],
-                    ["Late", report.attendance.late],
-                    ["Total recorded", report.attendance.totalRecorded]
-                  ].map(([label, value]) => (
-                    <div className="card" key={label} style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                      <span style={{ color: "var(--text-secondary)" }}>{label}</span>
-                      <strong style={{ fontSize: "1.75rem" }}>{value}</strong>
+      {activeTab === 'class' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <span style={{ fontWeight: 500 }}>Select Class:</span>
+            <select className="input-field" style={{ minWidth: '200px' }}>
+              <option>Grade 10 - A</option>
+              <option>Grade 10 - B</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Class Average</span>
+              <span style={{ fontSize: '2rem', fontWeight: 600 }}>82.4%</span>
+              <span style={{ color: 'var(--success)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <TrendingUp size={14} /> +2.1% from last term
+              </span>
+            </div>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Highest Assessment</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 600 }}>Midterm Exam</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Avg: 85%</span>
+            </div>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Lowest Assessment</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--danger)' }}>Chapter 4 Quiz</span>
+              <span style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>Avg: 68% - Unusually low</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Performance Distribution</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {[
+                  { range: '90-100% (Excellent)', count: 8, color: 'var(--primary-color)' },
+                  { range: '75-89% (Good)', count: 14, color: 'var(--success)' },
+                  { range: '60-74% (Average)', count: 7, color: 'var(--warning)' },
+                  { range: 'Below 60% (Needs Attention)', count: 3, color: 'var(--danger)' },
+                ].map(item => (
+                  <div key={item.range}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                      <span>{item.range}</span>
+                      <span style={{ fontWeight: 500 }}>{item.count} students</span>
                     </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${(item.count / 32) * 100}%`, height: '100%', backgroundColor: item.color, borderRadius: '4px' }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Subject Comparison</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {[
+                  { name: 'Mathematics', avg: 85 },
+                  { name: 'Physics', avg: 82 },
+                  { name: 'Chemistry', avg: 78 },
+                  { name: 'English', avg: 88 },
+                  { name: 'History', avg: 71 },
+                ].map(item => (
+                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ width: '100px', fontSize: '0.9rem' }}>{item.name}</div>
+                    <div style={{ flex: 1, height: '8px', backgroundColor: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${item.avg}%`, height: '100%', backgroundColor: item.avg < 75 ? 'var(--warning)' : 'var(--primary-color)' }}></div>
+                    </div>
+                    <div style={{ width: '40px', fontSize: '0.9rem', fontWeight: 500, textAlign: 'right' }}>{item.avg}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <h2 style={{ fontSize: '1.5rem', marginTop: '1rem' }}>Student Action Items</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            
+            <div className="card" style={{ borderLeft: '4px solid var(--danger)' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--danger)' }}>
+                <AlertCircle size={18} /> Requiring Attention
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                Students who have fallen below 60% or missed multiple recent assignments.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  { name: 'Marcus Johnson', reason: 'Failed last 2 exams' },
+                  { name: 'Sarah Williams', reason: 'Missing 3 assignments' },
+                  { name: 'David Lee', reason: 'Attendance dropped to 72%' },
+                ].map(s => (
+                  <li key={s.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--border-color)' }}>
+                    <span style={{ fontWeight: 500 }}>{s.name}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>{s.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="card" style={{ borderLeft: '4px solid var(--warning)' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--warning)' }}>
+                <TrendingDown size={18} /> Declining Performance
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                Students whose average dropped by &gt;5% in the last 30 days.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  { name: 'Emma Davis', reason: '88% → 81%' },
+                  { name: 'James Wilson', reason: '75% → 68%' },
+                ].map(s => (
+                  <li key={s.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--border-color)' }}>
+                    <span style={{ fontWeight: 500 }}>{s.name}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{s.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="card" style={{ borderLeft: '4px solid var(--success)' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--success)' }}>
+                <TrendingUp size={18} /> Improving Students
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                Students whose average increased by &gt;5% in the last 30 days.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  { name: 'Olivia Brown', reason: '65% → 72%' },
+                  { name: 'Liam Miller', reason: '82% → 89%' },
+                  { name: 'Noah Moore', reason: '70% → 78%' },
+                ].map(s => (
+                  <li key={s.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--border-color)' }}>
+                    <span style={{ fontWeight: 500 }}>{s.name}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>{s.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'subject' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <span style={{ fontWeight: 500 }}>Select Subject:</span>
+            <select className="input-field" style={{ minWidth: '200px' }}>
+              <option>Mathematics</option>
+              <option>Physics</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Subject Average Score</span>
+              <span style={{ fontSize: '2rem', fontWeight: 600 }}>79.5%</span>
+              <span style={{ color: 'var(--success)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <TrendingUp size={14} /> Stable across 3 classes
+              </span>
+            </div>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Highest Performing Class</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 600 }}>Grade 10 - A</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Avg: 85%</span>
+            </div>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Lowest Performing Class</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 600 }}>Grade 10 - C</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Avg: 72%</span>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Assessment Comparison</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              Comparing recent assessment averages across classes for this subject. Identifies unusually low performance.
+            </p>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--secondary-color)', borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '1rem' }}>Assessment</th>
+                    <th style={{ padding: '1rem' }}>Grade 10 - A</th>
+                    <th style={{ padding: '1rem' }}>Grade 10 - B</th>
+                    <th style={{ padding: '1rem' }}>Grade 10 - C</th>
+                    <th style={{ padding: '1rem' }}>Trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '1rem', fontWeight: 500 }}>Chapter 3 Quiz</td>
+                    <td style={{ padding: '1rem' }}>88%</td>
+                    <td style={{ padding: '1rem' }}>82%</td>
+                    <td style={{ padding: '1rem' }}>76%</td>
+                    <td style={{ padding: '1rem', color: 'var(--success)' }}><TrendingUp size={16} /></td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
+                    <td style={{ padding: '1rem', fontWeight: 500 }}>Midterm Exam</td>
+                    <td style={{ padding: '1rem' }}>81%</td>
+                    <td style={{ padding: '1rem' }}>75%</td>
+                    <td style={{ padding: '1rem', color: 'var(--danger)', fontWeight: 600 }}>64% <AlertCircle size={14} style={{ display: 'inline' }} /></td>
+                    <td style={{ padding: '1rem', color: 'var(--danger)' }}><TrendingDown size={16} /></td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '1rem', fontWeight: 500 }}>Chapter 4 Homework</td>
+                    <td style={{ padding: '1rem' }}>92%</td>
+                    <td style={{ padding: '1rem' }}>89%</td>
+                    <td style={{ padding: '1rem' }}>85%</td>
+                    <td style={{ padding: '1rem', color: 'var(--success)' }}><TrendingUp size={16} /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Overall Score Distribution</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {[
+                  { range: '90-100% (Excellent)', count: 25, color: 'var(--primary-color)' },
+                  { range: '75-89% (Good)', count: 42, color: 'var(--success)' },
+                  { range: '60-74% (Average)', count: 18, color: 'var(--warning)' },
+                  { range: 'Below 60% (Needs Attention)', count: 11, color: 'var(--danger)' },
+                ].map(item => (
+                  <div key={item.range}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                      <span>{item.range}</span>
+                      <span style={{ fontWeight: 500 }}>{item.count} students</span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${(item.count / 96) * 100}%`, height: '100%', backgroundColor: item.color, borderRadius: '4px' }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Top / Bottom Performers</h3>
+              
+              <div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Top 3 Students</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[
+                    { name: 'Sophia Martinez', class: '10-A', score: '98%' },
+                    { name: 'Alexander Chen', class: '10-B', score: '96%' },
+                    { name: 'Isabella Taylor', class: '10-A', score: '95%' }
+                  ].map(s => (
+                    <li key={s.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'var(--bg-color)', borderRadius: 'var(--radius-sm)' }}>
+                      <span>{s.name} <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginLeft: '0.5rem' }}>({s.class})</span></span>
+                      <span style={{ fontWeight: 600, color: 'var(--success)' }}>{s.score}</span>
+                    </li>
                   ))}
-                </div>
-              </section>
+                </ul>
+              </div>
 
-              <section className="card">
-                <h2 style={{ marginTop: 0 }}><ClipboardList size={20} /> Current teaching assignments</h2>
-                {report.assignments.length === 0 ? <p>No current assignments found.</p> : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
-                    {report.assignments.map((assignment, index) => (
-                      <div className="card" key={`${assignment.classId}-${assignment.sectionId}-${assignment.subjectId}-${assignment.academicYearId}-${index}`}>
-                        <strong>{assignment.className}{assignment.sectionName ? ` - ${assignment.sectionName}` : ""}</strong>
-                        <p>{assignment.subjectName ?? "Class teacher"} · {assignment.academicYearName}</p>
-                        <small>{assignment.assignmentTypes.join(", ")}</small>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              <section className="card">
-                <h2 style={{ marginTop: 0 }}><BookOpen size={20} /> Published assessments</h2>
-                <p>{report.assessments.publishedCount} published assessment(s) in your active assignment scope.</p>
-                {report.assessments.publishedAssessments.length > 0 && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
-                    {report.assessments.publishedAssessments.map(assessment => (
-                      <div className="card" key={assessment.id}>
-                        <strong>{assessment.title}</strong>
-                        <p>{assessment.subjectName} · {assessment.className}</p>
-                        <small>{assessment.assessmentDate} · {assessment.academicYearName} · {assessment.status}</small>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </>
-          )}
-        </>
+              <div style={{ marginTop: '0.5rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Bottom 3 Students (Need Support)</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[
+                    { name: 'Ethan White', class: '10-C', score: '45%' },
+                    { name: 'Mia Thomas', class: '10-C', score: '51%' },
+                    { name: 'Lucas Jackson', class: '10-B', score: '54%' }
+                  ].map(s => (
+                    <li key={s.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', backgroundColor: 'var(--bg-color)', borderRadius: 'var(--radius-sm)' }}>
+                      <span>{s.name} <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginLeft: '0.5rem' }}>({s.class})</span></span>
+                      <span style={{ fontWeight: 600, color: 'var(--danger)' }}>{s.score}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -12,7 +12,8 @@
       ],
       "classesTaught": [
         "10th A",
-        "11th Science"
+        "11th Science",
+        "6th A"
       ]
     },
     {
@@ -78,6 +79,23 @@
         "10th B",
         "11th Commerce"
       ]
+    },
+    {
+      "id": "T6",
+      "name": "Class Teacher",
+      "email": "teacher@school.local",
+      "password": "Teacher@123",
+      "role": "Class Teacher",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Teacher",
+      "subjects": [
+        "Mathematics",
+        "General"
+      ],
+      "classesTaught": [
+        "10th A",
+        "11th Science",
+        "6th A"
+      ]
     }
   ],
   "classes": [
@@ -120,9 +138,41 @@
       "studentsCount": 35,
       "subject": "Commerce Core",
       "isClassTeacher": false
+    },
+    {
+      "id": "6th A",
+      "name": "Class 6",
+      "section": "A",
+      "studentsCount": 4,
+      "subject": "General",
+      "isClassTeacher": true
     }
   ],
   "students": [
+    {
+      "id": "TEST006",
+      "name": "Suraj Sharma",
+      "rollNumber": "06-01",
+      "classId": "6th A"
+    },
+    {
+      "id": "TEST007",
+      "name": "Rahul Kumar",
+      "rollNumber": "06-02",
+      "classId": "6th A"
+    },
+    {
+      "id": "TEST008",
+      "name": "Aman Singh",
+      "rollNumber": "06-03",
+      "classId": "6th A"
+    },
+    {
+      "id": "TEST009",
+      "name": "Neha Verma",
+      "rollNumber": "06-04",
+      "classId": "6th A"
+    },
     {
       "id": "S1",
       "name": "Akhankhya patel",
